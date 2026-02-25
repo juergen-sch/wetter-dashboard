@@ -199,15 +199,28 @@
     </div>
   </div>
 
-  <label for="location">Ort wählen:</label>
-  <select id="location">
-    <option value="Gmunden">Gmunden</option>
-    <option value="Linz">Linz</option>
-    <option value="Wels">Wels</option>
-    <option value="Salzburg">Salzburg</option>
-    <option value="Zell">Zell am See</option>
-    <option value="Regau">Regau</option>
-  </select>
+  <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+  <div>
+    <label for="location">Ort wählen:</label><br>
+    <select id="location">
+      <option value="Gmunden">Gmunden</option>
+      <option value="Linz">Linz</option>
+      <option value="Wels">Wels</option>
+      <option value="Salzburg">Salzburg</option>
+      <option value="Zell">Zell am See</option>
+      <option value="Regau">Regau</option>
+    </select>
+  </div>
+
+  <div style="flex:1; min-width:260px;">
+    <label for="customPlace">Ort suchen:</label><br>
+    <div style="display:flex; gap:8px;">
+      <input id="customPlace" type="text" placeholder="z.B. Traunkirchen, Wien, LOWW…" style="flex:1; padding:6px 10px; font-size:16px;">
+      <button type="button" onclick="searchPlace()">Suchen</button>
+    </div>
+    <div id="placeStatus" style="font-size:12px; color:#666; margin-top:4px;"></div>
+  </div>
+</div>
 
   <div class="buttons">
     <button class="button-active" id="btn0" onclick="setDay(0)">Heute</button>
@@ -390,6 +403,65 @@
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,windspeed_10m,winddirection_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&timezone=auto`;
       const res = await fetch(url);
       const data = await res.json();
+
+    // --- Custom place search via Open-Meteo Geocoding ---
+async function geocodePlace(q) {
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=de&format=json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Geocoding fehlgeschlagen");
+  const data = await res.json();
+  return data?.results?.[0] || null;
+}
+
+async function searchPlace() {
+  const input = document.getElementById("customPlace");
+  const status = document.getElementById("placeStatus");
+  const q = (input.value || "").trim();
+
+  if (!q) { status.textContent = "Bitte Ort eingeben."; return; }
+
+  status.textContent = "Suche…";
+
+  try {
+    const r = await geocodePlace(q);
+    if (!r) {
+      status.textContent = "Nichts gefunden. Tipp: 'Wien' oder 'Traunkirchen'.";
+      return;
+    }
+
+    const label = `${r.name}${r.admin1 ? ", " + r.admin1 : ""}${r.country ? " (" + r.country + ")" : ""}`;
+    status.textContent = `Gefunden: ${label}`;
+
+    // Wetter laden
+    loadWeather(r.latitude, r.longitude);
+
+    // Optional: Dropdown auf "Custom" setzen (ohne deine fixe Liste zu ändern)
+    const sel = document.getElementById("location");
+    const existing = sel.querySelector('option[value="__custom__"]');
+    if (!existing) {
+      const opt = document.createElement("option");
+      opt.value = "__custom__";
+      opt.textContent = "📍 " + label;
+      sel.insertBefore(opt, sel.firstChild); // oben einfügen
+    } else {
+      existing.textContent = "📍 " + label;
+    }
+    sel.value = "__custom__";
+
+  } catch (e) {
+    status.textContent = "Fehler: " + String(e);
+  }
+}
+
+// Enter-Taste im Suchfeld triggert Suche
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("customPlace");
+  if (input) {
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") searchPlace();
+    });
+  }
+});  
 
       const current = data.current_weather;
       document.getElementById('current-weather').innerHTML = `
