@@ -6,197 +6,240 @@
 <title>Weather-Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 0; }
-.container { width: 95%; max-width: 1300px; margin: 20px auto; background: #fff; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-h1, h2 { color: #333; margin-top: 1em; }
-select, button { padding: 6px 12px; font-size: 16px; margin: 10px 5px 20px 0; }
+  body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 0; }
+  .container { width: 95%; max-width: 1300px; margin: 20px auto; background: #fff; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+  h1, h2 { color: #333; margin-top: 1em; }
+  select, button { padding: 6px 12px; font-size: 16px; margin: 10px 5px 20px 0; }
 
-.forecast, .weekly { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
-.forecast-card, .day-card {
-flex: 0 0 auto; background: #f8f8f8; padding: 10px; border-radius: 8px;
-text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1); width: 120px;
-}
-.forecast-card.night { background-color: #dde3ea; }
-.forecast-card.evening { background-color: #f0e0d0; }
-.temp-warm { color: darkred; font-weight: bold; }
-.temp-cool { color: steelblue; font-weight: bold; }
-.buttons button.button-active { background: #007BFF; color: white; }
+  /* ===== Top controls (nur Suche) ===== */
+  .top-controls{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    margin-top: 10px;
+  }
+  .top-controls .block{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    flex: 1 1 420px;
+    min-width: 260px;
+  }
+  .top-controls label{ margin: 0; font-size: 14px; color:#333; }
+  .top-controls button, .top-controls input{ margin: 0; font-size: 16px; }
+  .top-controls .searchrow{ display:flex; gap:8px; align-items:center; }
+  .top-controls input{
+    flex:1; padding: 6px 10px; border: 1px solid rgba(0,0,0,0.18);
+    border-radius: 8px; outline: none;
+  }
+  .top-controls input:focus{
+    border-color: rgba(0,123,255,0.5);
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.12);
+  }
+  .top-controls button{
+    padding: 7px 12px; border: 1px solid rgba(0,0,0,0.18);
+    background: rgba(255,255,255,0.9); border-radius: 8px; cursor:pointer;
+  }
+  .top-controls button:hover{ filter: brightness(0.98); }
+  #placeStatus{ font-size:12px; color:#666; min-height: 16px; }
 
-canvas { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  /* ===== FIX: Forecast layout ===== */
+  .forecast { display:block; }
+  .weekly { display:flex; overflow-x:auto; gap:10px; padding-bottom:10px; max-width:100%; }
+  .weekly::-webkit-scrollbar{ height:10px; }
+  .weekly::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.25); border-radius:999px; }
+  .weekly::-webkit-scrollbar-track{ background: rgba(0,0,0,0.08); border-radius:999px; }
 
-.tabs { display: flex; margin-bottom: 10px; }
-.tab-button {
-padding: 10px 20px; background: #eee; cursor: pointer; margin-right: 5px;
-border-radius: 5px 5px 0 0;
-}
-.tab-button.active { background: #007BFF; color: white; }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
+  .forecast-card, .day-card {
+    flex: 0 0 auto; background: #f8f8f8; padding: 10px; border-radius: 8px;
+    text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1); width: 120px;
+  }
+  .forecast-card.night { background-color: #dde3ea; }
+  .forecast-card.evening { background-color: #f0e0d0; }
+  .temp-warm { color: darkred; font-weight: bold; }
+  .temp-cool { color: steelblue; font-weight: bold; }
+  .buttons button.button-active { background: #007BFF; color: white; }
 
-.webcams {
-display: flex; flex-wrap: wrap; gap: 20px; margin-top: 30px; justify-content: space-between;
-}
-.webcam { flex: 1 1 48%; display: flex; flex-direction: column; align-items: center; }
-.webcam img, .webcam iframe, .webcam video {
-width: 100%; height: 400px; object-fit: cover;
-border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
+  canvas { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 
-/* ===== METAR/TAF PRO PANEL ===== */
-.wx-panel {
-margin-top: 10px;
-padding: 14px;
-border-radius: 14px;
-background: linear-gradient(180deg, #fbfbfd, #f4f6fa);
-border: 1px solid rgba(0,0,0,0.08);
-box-shadow: 0 8px 22px rgba(0,0,0,0.06);
-}
+  .tabs { display: flex; margin-bottom: 10px; }
+  .tab-button {
+    padding: 10px 20px; background: #eee; cursor: pointer; margin-right: 5px;
+    border-radius: 5px 5px 0 0;
+  }
+  .tab-button.active { background: #007BFF; color: white; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
-/* Subtle category frames on the panel */
-.wx-panel.cat-vfr  { border-color: rgba(16,185,129,.28); }
-.wx-panel.cat-mvfr { border-color: rgba(245,158,11,.30); }
-.wx-panel.cat-ifr  { border-color: rgba(239,68,68,.28); }
-.wx-panel.cat-lifr { border-color: rgba(147,51,234,.28); }
+  .webcams {
+    display: flex; flex-wrap: wrap; gap: 20px; margin-top: 30px; justify-content: space-between;
+  }
+  .webcam { flex: 1 1 48%; display: flex; flex-direction: column; align-items: center; }
+  .webcam img, .webcam iframe, .webcam video {
+    width: 100%; height: 400px; object-fit: cover;
+    border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
 
-.wx-topline {
-display: flex;
-flex-wrap: wrap;
-align-items: center;
-gap: 10px;
-justify-content: space-between;
-margin-bottom: 10px;
-}
+  /* ===== Top weather + embed two-column layout ===== */
+  .top-wx-layout{
+    display:grid;
+    grid-template-columns: 1fr 380px;
+    gap: 18px;
+    align-items:start;
+    margin-top: 8px;
+  }
+  .top-wx-layout > div { min-width: 0; } /* wichtig: erlaubt Shrink, sonst overflow */
 
-.wx-title { display:flex; align-items:center; gap:10px; margin:0; }
+  .embed-box{
+    justify-self:end;
+    width: 380px;
+    max-width: 100%;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 10px;
+  }
+  .embed-box .embed-title{
+    font-size: 14px;
+    font-weight: 700;
+    color:#333;
+    margin: 2px 0 8px 0;
+  }
+  .embed-box a{ margin:0 !important; }
 
-.wx-badges { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  /* ===== METAR/TAF PRO PANEL ===== */
+  .wx-panel {
+    margin-top: 10px;
+    padding: 14px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fbfbfd, #f4f6fa);
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+  }
+  .wx-panel.cat-vfr  { border-color: rgba(16,185,129,.28); }
+  .wx-panel.cat-mvfr { border-color: rgba(245,158,11,.30); }
+  .wx-panel.cat-ifr  { border-color: rgba(239,68,68,.28); }
+  .wx-panel.cat-lifr { border-color: rgba(147,51,234,.28); }
 
-.wx-pill {
-display:inline-flex;
-align-items:center;
-gap:6px;
-padding: 4px 10px;
-border-radius: 999px;
-font-size: 12px;
-border: 1px solid rgba(0,0,0,0.10);
-background: rgba(255,255,255,0.75);
-}
-.wx-pill strong { font-weight: 700; }
+  .wx-topline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .wx-title { display:flex; align-items:center; gap:10px; margin:0; }
+  .wx-badges { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 
-.wx-pill.vfr  { border-color: rgba(16, 185, 129, .35); }
-.wx-pill.mvfr { border-color: rgba(245, 158, 11, .45); }
-.wx-pill.ifr  { border-color: rgba(239, 68, 68, .40); }
-.wx-pill.lifr { border-color: rgba(147, 51, 234, .35); }
+  .wx-pill {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    border: 1px solid rgba(0,0,0,0.10);
+    background: rgba(255,255,255,0.75);
+  }
+  .wx-pill strong { font-weight: 700; }
+  .wx-pill.vfr  { border-color: rgba(16, 185, 129, .35); }
+  .wx-pill.mvfr { border-color: rgba(245, 158, 11, .45); }
+  .wx-pill.ifr  { border-color: rgba(239, 68, 68, .40); }
+  .wx-pill.lifr { border-color: rgba(147, 51, 234, .35); }
 
-.wx-grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 12px; }
+  .wx-grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 12px; }
 
-.wx-card {
-border-radius: 14px;
-background: rgba(255,255,255,0.85);
-border: 1px solid rgba(0,0,0,0.08);
-box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-padding: 12px;
-}
+  .wx-card {
+    border-radius: 14px;
+    background: rgba(255,255,255,0.85);
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 12px;
+  }
 
-/* Subtle category frame on METAR card too */
-.wx-card.cat-vfr  { border-color: rgba(16,185,129,.22); }
-.wx-card.cat-mvfr { border-color: rgba(245,158,11,.24); }
-.wx-card.cat-ifr  { border-color: rgba(239,68,68,.22); }
-.wx-card.cat-lifr { border-color: rgba(147,51,234,.22); }
+  .wx-card h4 {
+    margin: 0 0 10px 0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size: 14px;
+  }
 
-.wx-card h4 {
-margin: 0 0 10px 0;
-display:flex;
-justify-content:space-between;
-align-items:center;
-font-size: 14px;
-}
+  .wx-kv {
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+    margin-bottom: 10px;
+  }
 
-.wx-kv {
-display:grid;
-grid-template-columns: repeat(2, minmax(0, 1fr));
-gap: 8px 12px;
-margin-bottom: 10px;
-}
+  .wx-kv .item {
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.06);
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .wx-kv .label { font-size: 12px; opacity: .75; }
+  .wx-kv .value { font-size: 14px; font-weight: 700; margin-top: 3px; }
 
-.wx-kv .item {
-padding: 8px 10px;
-border-radius: 12px;
-background: rgba(0,0,0,0.03);
-border: 1px solid rgba(0,0,0,0.06);
-transition: border-color .15s ease, background .15s ease;
-}
+  .wx-kv .item.warn { border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.08); }
+  .wx-kv .item.crit { border-color: rgba(239,68,68,.38); background: rgba(239,68,68,.08); }
 
-.wx-kv .label { font-size: 12px; opacity: .75; }
-.wx-kv .value { font-size: 14px; font-weight: 700; margin-top: 3px; }
+  .wx-raw {
+    background: rgba(0,0,0,0.03);
+    border: 1px dashed rgba(0,0,0,0.15);
+    padding: 10px;
+    border-radius: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    margin: 0;
+  }
 
-/* Critical markers */
-.wx-kv .item.warn {
-border-color: rgba(245,158,11,.35);
-background: rgba(245,158,11,.08);
-}
-.wx-kv .item.crit {
-border-color: rgba(239,68,68,.38);
-background: rgba(239,68,68,.08);
-}
+  .wx-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 
-.wx-raw {
-background: rgba(0,0,0,0.03);
-border: 1px dashed rgba(0,0,0,0.15);
-padding: 10px;
-border-radius: 12px;
-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-font-size: 13px;
-white-space: pre-wrap;
-margin: 0;
-}
+  .wx-btn {
+    border: 1px solid rgba(0,0,0,0.15);
+    background: rgba(255,255,255,0.85);
+    padding: 7px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    margin: 0;
+  }
+  .wx-btn:hover { filter: brightness(0.98); }
 
-.wx-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+  .wx-subtle { font-size: 12px; opacity: .75; margin-top: 8px; }
 
-.wx-btn {
-border: 1px solid rgba(0,0,0,0.15);
-background: rgba(255,255,255,0.85);
-padding: 7px 10px;
-border-radius: 10px;
-cursor: pointer;
-font-size: 13px;
-}
-.wx-btn:hover { filter: brightness(0.98); }
+  @media (max-width: 900px) {
+    .wx-grid { grid-template-columns: 1fr; }
+    .wx-kv { grid-template-columns: 1fr 1fr; }
+    .top-wx-layout{ grid-template-columns: 1fr; }
+    .embed-box{ justify-self: start; width: 100%; }
+  }
 
-.wx-subtle { font-size: 12px; opacity: .75; margin-top: 8px; }
-
-@media (max-width: 900px) {
-.wx-grid { grid-template-columns: 1fr; }
-.wx-kv { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 768px) {
-.webcams { flex-direction: column; }
-.webcam { flex: 1 1 100%; }
-.forecast-card, .day-card { width: 100px; }
-canvas { width: 100% !important; height: auto !important; }
-.tabs { flex-wrap: wrap; }
-.tab-button { flex: 1 1 100%; margin-bottom: 5px; }
-.buttons button { width: 100%; margin-bottom: 10px; }
-select { width: 100%; margin-bottom: 15px; }
-}
+  @media (max-width: 768px) {
+    .webcams { flex-direction: column; }
+    .webcam { flex: 1 1 100%; }
+    .forecast-card, .day-card { width: 100px; }
+    canvas { width: 100% !important; height: auto !important; }
+    .tabs { flex-wrap: wrap; }
+    .tab-button { flex: 1 1 100%; margin-bottom: 5px; }
+    .buttons button { width: 100%; margin-bottom: 10px; }
+    .top-controls button{ width:auto; }
+  }
 </style>
 </head>
 
 <body>
 <div class="container">
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<h1 style="text-align: center; flex: 1; margin: 0;">Weather-Dashboard</h1>
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 style="text-align: center; flex: 1; margin: 0;">Weather-Dashboard</h1>
 
-    <!-- Header rechts: Lokal + UTC + LOLU Sunrise/Sunset -->
-<div style="text-align:right; color:#555; line-height:1.25;">
-  <div id="datetime" style="font-size: 1rem;"></div>
-  <div style="font-size:0.92rem; opacity:.92;">
-    UTC: <strong id="utcNow">--:--:--</strong> ·
-    LOLU SR: <strong id="loluSunrise">--:--</strong> ·
-    SS: <strong id="loluSunset">--:--</strong>
-  </div>
-</div>
+    <div style="text-align:right; color:#555; line-height:1.25;">
       <div id="datetime" style="font-size: 1rem;"></div>
       <div style="font-size:0.92rem; opacity:.92;">
         UTC: <strong id="utcNow">--:--:--</strong> ·
@@ -204,635 +247,569 @@ select { width: 100%; margin-bottom: 15px; }
         SS: <strong id="loluSunset">--:--</strong>
       </div>
     </div>
-</div>
-
-<div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-
-  <div>
-    <label for="location">Ort wählen:</label><br>
-    <select id="location">
-      <option value="Gmunden">Gmunden</option>
-      <option value="Linz">Linz</option>
-      <option value="Wels">Wels</option>
-      <option value="Salzburg">Salzburg</option>
-      <option value="Zell">Zell am See</option>
-      <option value="Regau">Regau</option>
-    </select>
   </div>
 
-  <div style="flex:1; min-width:260px;">
-    <label for="customPlace">Ort suchen:</label><br>
-    <div style="display:flex; gap:8px;">
-      <input id="customPlace" type="text"
-             placeholder="z. B. Traunkirchen, Wien, LOWW…"
-             style="flex:1; padding:6px 10px; font-size:16px;">
-      <button type="button" onclick="searchPlace()">Suchen</button>
+  <div class="top-controls">
+    <div class="block">
+      <label for="customPlace">Ort suchen (Standard ist Gmunden):</label>
+      <div class="searchrow">
+        <input id="customPlace" type="text" placeholder="z. B. Traunkirchen, Wien, LOWW…">
+        <button type="button" onclick="searchPlace()">Suchen</button>
+      </div>
+      <div id="placeStatus"></div>
     </div>
-    <div id="placeStatus" style="font-size:12px; color:#666; margin-top:4px;"></div>
   </div>
 
-</div>
+  <div class="buttons">
+    <button class="button-active" id="btn0" onclick="setDay(0)">Heute</button>
+    <button id="btn1" onclick="setDay(1)">Morgen</button>
+    <button id="btn2" onclick="setDay(2)">Übermorgen</button>
+  </div>
 
-<div class="buttons">
-<button class="button-active" id="btn0" onclick="setDay(0)">Heute</button>
-<button id="btn1" onclick="setDay(1)">Morgen</button>
-<button id="btn2" onclick="setDay(2)">Übermorgen</button>
-</div>
+  <div class="top-wx-layout">
+    <div>
+      <div class="weather">
+        <h2>Aktuelles Wetter</h2>
+        <p id="current-weather">Lade Daten...</p>
+      </div>
 
-<div class="weather">
-<h2>Aktuelles Wetter</h2>
-<p id="current-weather">Lade Daten...</p>
-</div>
+      <div class="forecast">
+        <h2>12-Stunden-Vorhersage</h2>
+        <div class="weekly" id="forecast"></div>
+      </div>
+    </div>
 
-<div class="forecast">
-<h2>12-Stunden-Vorhersage</h2>
-<div class="weekly" id="forecast"></div>
-</div>
+    <div class="embed-box">
+      <div class="embed-title">METAR/TAF Widget (LOLU/LOWL)</div>
 
-<h2>🔍 Wetterverläufe (24h)</h2>
-<div class="tabs">
-<div class="tab-button active" onclick="switchTab(0)">🌡️ Temperatur</div>
-<div class="tab-button" onclick="switchTab(1)">💨 Wind (Knoten)</div>
-<div class="tab-button" onclick="switchTab(2)">🌧️ Regen (mm)</div>
-<div class="tab-button" onclick="switchTab(3)">👁️ Sichtweite</div>
-</div>
+      <!-- EXAKT dein Embed -->
+      <a href="https://metar-taf.com/metar/LOLU?station_id=LOWL" id="metartaf-UhKGzHpO" style="font-size:18px; font-weight:500; color:#000; width:350px; height:278px; display:block">METAR Gmunden-Laakirchen Airfield</a>
+<script async defer crossorigin="anonymous" src="https://metar-taf.com/embed-js/LOLU?u=68055&bg_color=ffffff&station_id=LOWL&layout=landscape&qnh=hPa&rh=rh&target=UhKGzHpO"></script>
+      <!-- /Embed -->
+    </div>
+  </div>
 
-<div class="tab-content active"><canvas height="100" id="tempChart"></canvas></div>
-<div class="tab-content"><canvas height="100" id="windChart"></canvas></div>
-<div class="tab-content"><canvas height="100" id="rainChart"></canvas></div>
+  <h2>🔍 Wetterverläufe (24h)</h2>
+  <div class="tabs">
+    <div class="tab-button active" onclick="switchTab(0)">🌡️ Temperatur</div>
+    <div class="tab-button" onclick="switchTab(1)">💨 Wind (Knoten)</div>
+    <div class="tab-button" onclick="switchTab(2)">🌧️ Regen (mm)</div>
+    <div class="tab-button" onclick="switchTab(3)">👁️ Sichtweite</div>
+  </div>
 
-<div class="daily">
-<h2>Wochenübersicht</h2>
-<div class="weekly" id="weekly"></div>
-</div>
+  <div class="tab-content active"><canvas height="100" id="tempChart"></canvas></div>
+  <div class="tab-content"><canvas height="100" id="windChart"></canvas></div>
+  <div class="tab-content"><canvas height="100" id="rainChart"></canvas></div>
 
-<div class="tab-content">
-<iframe allowfullscreen="" frameborder="0" height="500"
-src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=visibility&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true"
-style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%">
-</iframe>
-</div>
+  <div class="daily">
+    <h2>Wochenübersicht</h2>
+    <div class="weekly" id="weekly"></div>
+  </div>
 
-<h2>🛰️ Interaktives Wetterradar (Wind, Regen &amp; Temperatur – Windy)</h2>
-<iframe allowfullscreen="" frameborder="0" height="500"
-src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=wind&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true"
-style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%">
-</iframe>
+  <div class="tab-content">
+    <iframe allowfullscreen="" frameborder="0" height="500"
+      src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=visibility&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true"
+      style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%"></iframe>
+  </div>
 
-<div class="webcams">
-<div class="webcam">
-<h2>Gmunden Süd-West</h2>
-<img alt="Webcam SW" src="https://www.fliegerclub-traunsee.at/cams/image-west000M.jpg"/>
-</div>
-<div class="webcam">
-<h2>Gmunden Osten</h2>
-<img alt="Webcam Ost" src="https://www.fliegerclub-traunsee.at/cams/image-ost000.jpg"/>
-</div>
-<div class="webcam">
-<h2>Schafberg (Panomax)</h2>
-<iframe allowfullscreen="" frameborder="0" src="https://schafberg.panomax.com/"></iframe>
-</div>
-<div class="webcam">
-<h2>🌄 Panoramablick vom Lichtenberg</h2>
-<iframe allowfullscreen="" frameborder="0" height="600" src="https://lichtenberg.panomax.com/" width="100%"></iframe>
-</div>
-</div>
+  <h2>🛰️ Interaktives Wetterradar (Wind, Regen &amp; Temperatur – Windy)</h2>
+  <iframe allowfullscreen="" frameborder="0" height="500"
+    src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=wind&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true"
+    style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%"></iframe>
 
-<h2>✈️ Pilotentools</h2>
-<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
-<a href="https://www.homebriefing.com/cms-acg/opencms/de/home/" style="text-decoration: none;" target="_blank">📝 Homebriefing (ACG)</a>
+  <div class="webcams">
+    <div class="webcam">
+      <h2>Gmunden Süd-West</h2>
+      <img alt="Webcam SW" src="https://www.fliegerclub-traunsee.at/cams/image-west000M.jpg"/>
+    </div>
+    <div class="webcam">
+      <h2>Gmunden Osten</h2>
+      <img alt="Webcam Ost" src="https://www.fliegerclub-traunsee.at/cams/image-ost000.jpg"/>
+    </div>
+    <div class="webcam">
+      <h2>Schafberg (Panomax)</h2>
+      <iframe allowfullscreen="" frameborder="0" src="https://schafberg.panomax.com/"></iframe>
+    </div>
+    <div class="webcam">
+      <h2>🌄 Panoramablick vom Lichtenberg</h2>
+      <iframe allowfullscreen="" frameborder="0" height="600" src="https://lichtenberg.panomax.com/" width="100%"></iframe>
+    </div>
+  </div>
+
+  <h2>✈️ Pilotentools</h2>
+  <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
+    <a href="https://www.homebriefing.com/cms-acg/opencms/de/home/" style="text-decoration: none;" target="_blank">📝 Homebriefing (ACG)</a>
     <a href="https://onres24.com/login.php" style="text-decoration: none;" target="_blank">📅 onres24 (Login)</a>
-<a href="https://metar-taf.com/" target="_blank">📡 METAR/TAF Übersicht</a>
-<a href="https://eaip.austrocontrol.at/" style="text-decoration: none;" target="_blank">📘 eAIP Austria</a>
-    <a href="https://onres24.com/login.php" style="text-decoration: none;" target="_blank">📅 onres24 (Login)</a>
-</div>
+    <a href="https://metar-taf.com/" target="_blank">📡 METAR/TAF Übersicht</a>
+    <a href="https://eaip.austrocontrol.at/" style="text-decoration: none;" target="_blank">📘 eAIP Austria</a>
+  </div>
 
-<h2>📡 METAR / TAF (Flugwetter Österreich)</h2>
-<label for="metarSelect">Flugplatz wählen:</label>
-<select id="metarSelect" style="margin-bottom: 10px;">
-<option value="LOAV">LOAV – Vöslau</option>
-<option value="LOWL">LOWL – Linz</option>
-<option value="LOWW">LOWW – Wien</option>
-<option value="LOWG">LOWG – Graz</option>
-<option value="LOWK">LOWK – Klagenfurt</option>
-<option value="LOWI">LOWI – Innsbruck</option>
-</select>
+  <h2>📡 METAR / TAF (Flugwetter Österreich)</h2>
+  <label for="metarSelect">Flugplatz wählen:</label>
+  <select id="metarSelect" style="margin-bottom: 10px;">
+    <option value="LOAV">LOAV – Vöslau</option>
+    <option value="LOWL">LOWL – Linz</option>
+    <option value="LOWW">LOWW – Wien</option>
+    <option value="LOWG">LOWG – Graz</option>
+    <option value="LOWK">LOWK – Klagenfurt</option>
+    <option value="LOWI">LOWI – Innsbruck</option>
+  </select>
 
-<div id="wxPanel" class="wx-panel">
-<div class="wx-topline">
-<h3 class="wx-title">📡 METAR / TAF</h3>
+  <div id="wxPanel" class="wx-panel">
+    <div class="wx-topline">
+      <h3 class="wx-title">📡 METAR / TAF</h3>
 
-<div class="wx-badges">
-<span id="wxCatPill" class="wx-pill" style="display:none;">
-<strong id="wxCatText"></strong>
-</span>
-<span class="wx-pill">Station: <strong id="wxStation">—</strong></span>
-<span class="wx-pill">Stand (UTC): <strong id="wxObs">—</strong></span>
-</div>
-</div>
+      <div class="wx-badges">
+        <span id="wxCatPill" class="wx-pill" style="display:none;">
+          <strong id="wxCatText"></strong>
+        </span>
+        <span class="wx-pill">Station: <strong id="wxStation">—</strong></span>
+        <span class="wx-pill">Stand (UTC): <strong id="wxObs">—</strong></span>
+      </div>
+    </div>
 
-<div class="wx-grid">
-<div id="wxMetarCard" class="wx-card">
-<h4>
-<span>METAR</span>
-<div class="wx-actions">
-<button class="wx-btn" type="button" onclick="copyText('metarRaw')">Copy</button>
-<button class="wx-btn" type="button" onclick="toggleRaw('metarRaw')">Raw</button>
-</div>
-</h4>
+    <div class="wx-grid">
+      <div id="wxMetarCard" class="wx-card">
+        <h4>
+          <span>METAR</span>
+          <div class="wx-actions">
+            <button class="wx-btn" type="button" onclick="copyText('metarRaw')">Copy</button>
+            <button class="wx-btn" type="button" onclick="toggleRaw('metarRaw')">Raw</button>
+          </div>
+        </h4>
 
-<div class="wx-kv">
-<div id="kvWind" class="item"><div class="label">Wind</div><div class="value" id="wxWind">—</div></div>
-<div id="kvVis" class="item"><div class="label">Sicht</div><div class="value" id="wxVis">—</div></div>
-<div id="kvCeil" class="item"><div class="label">Ceiling</div><div class="value" id="wxCeil">—</div></div>
-<div id="kvQnh" class="item"><div class="label">QNH</div><div class="value" id="wxQnh">—</div></div>
-<div id="kvTemp" class="item"><div class="label">Temp / DP</div><div class="value" id="wxTempDp">—</div></div>
-<div id="kvWx" class="item"><div class="label">Wetter</div><div class="value" id="wxWx">—</div></div>
-</div>
+        <div class="wx-kv">
+          <div id="kvWind" class="item"><div class="label">Wind</div><div class="value" id="wxWind">—</div></div>
+          <div id="kvVis" class="item"><div class="label">Sicht</div><div class="value" id="wxVis">—</div></div>
+          <div id="kvCeil" class="item"><div class="label">Ceiling</div><div class="value" id="wxCeil">—</div></div>
+          <div id="kvQnh" class="item"><div class="label">QNH</div><div class="value" id="wxQnh">—</div></div>
+          <div id="kvTemp" class="item"><div class="label">Temp / DP</div><div class="value" id="wxTempDp">—</div></div>
+          <div id="kvWx" class="item"><div class="label">Wetter</div><div class="value" id="wxWx">—</div></div>
+        </div>
 
-<pre id="metarRaw" class="wx-raw">Lade METAR…</pre>
-<div id="wxHint" class="wx-subtle"></div>
-</div>
+        <pre id="metarRaw" class="wx-raw">Lade METAR…</pre>
+        <div id="wxHint" class="wx-subtle"></div>
+      </div>
 
-<div class="wx-card">
-<h4>
-<span>TAF</span>
-<div class="wx-actions">
-<button class="wx-btn" type="button" onclick="copyText('tafRaw')">Copy</button>
-<button class="wx-btn" type="button" onclick="toggleRaw('tafRaw')">Raw</button>
-</div>
-</h4>
+      <div class="wx-card">
+        <h4>
+          <span>TAF</span>
+          <div class="wx-actions">
+            <button class="wx-btn" type="button" onclick="copyText('tafRaw')">Copy</button>
+            <button class="wx-btn" type="button" onclick="toggleRaw('tafRaw')">Raw</button>
+          </div>
+        </h4>
 
-<pre id="tafRaw" class="wx-raw">Lade TAF…</pre>
-<div class="wx-subtle" id="wxTafNote"></div>
-</div>
-</div>
-</div>
+        <pre id="tafRaw" class="wx-raw">Lade TAF…</pre>
+        <div class="wx-subtle" id="wxTafNote"></div>
+      </div>
+    </div>
+  </div>
 
 <script>
-const locations = {
-Gmunden: { lat: 47.918, lon: 13.799 },
-Linz: { lat: 48.3064, lon: 14.2861 },
-Wels: { lat: 48.1667, lon: 14.0333 },
-Salzburg: { lat: 47.8095, lon: 13.0550 },
-Zell: { lat: 47.3249, lon: 12.7943 },
-Regau: { lat: 47.9833, lon: 13.7167 }
-};
-// ===== Custom Ortssuche (Open-Meteo Geocoding) =====
-async function geocodePlace(q) {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=de&format=json`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Geocoding fehlgeschlagen");
-  const data = await res.json();
-  return data?.results?.[0] || null;
-}
+  // Default coords (Gmunden)
+  const DEFAULT_COORDS = { lat: 47.918, lon: 13.799 };
 
-async function searchPlace() {
-  const input = document.getElementById("customPlace");
-  const status = document.getElementById("placeStatus");
-  const q = (input.value || "").trim();
+  let selectedDay = 0;
+  let tempChart, windChart, rainChart;
 
-  if (!q) {
-    status.textContent = "Bitte Ort eingeben.";
-    return;
+  function setDay(dayIndex) {
+    selectedDay = dayIndex;
+    document.querySelectorAll(".buttons button").forEach(btn => btn.classList.remove("button-active"));
+    document.getElementById("btn" + dayIndex).classList.add("button-active");
+
+    const c = window.__customCoords || DEFAULT_COORDS;
+    loadWeather(c.lat, c.lon);
   }
 
-  status.textContent = "Suche…";
-
-  try {
-    const r = await geocodePlace(q);
-    if (!r) {
-      status.textContent = "Nichts gefunden.";
-      return;
-    }
-
-    const label = `${r.name}${r.admin1 ? ", " + r.admin1 : ""}${r.country ? " (" + r.country + ")" : ""}`;
-    status.textContent = `Gefunden: ${label}`;
-
-    // Wetter laden
-    loadWeather(r.latitude, r.longitude);
-
-    // Dropdown auf Custom setzen
-    const sel = document.getElementById("location");
-    let opt = sel.querySelector('option[value="__custom__"]');
-    if (!opt) {
-      opt = document.createElement("option");
-      opt.value = "__custom__";
-      sel.insertBefore(opt, sel.firstChild);
-    }
-    opt.textContent = "📍 " + label;
-    sel.value = "__custom__";
-
-  } catch (e) {
-    status.textContent = "Fehler bei der Suche.";
+  function switchTab(index) {
+    document.querySelectorAll(".tab-button").forEach((btn, i) =>
+      btn.classList.toggle("active", i === index)
+    );
+    document.querySelectorAll(".tab-content").forEach((tab, i) =>
+      tab.classList.toggle("active", i === index)
+    );
   }
-}
 
-// Enter-Taste im Suchfeld
-document.addEventListener("DOMContentLoaded", () => {
-  const input = document.getElementById("customPlace");
-  if (input) {
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter") searchPlace();
+  function knots(kmh) { return +(kmh / 1.852).toFixed(1); }
+
+  function windDirectionToText(degree) {
+    const dirs = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+    return dirs[Math.round(degree / 45) % 8];
+  }
+
+  async function loadWeather(lat, lon) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,windspeed_10m,winddirection_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&timezone=auto`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const current = data.current_weather;
+    document.getElementById('current-weather').innerHTML = `
+      🌡️ Temperatur: ${current.temperature}°C<br>
+      🌬️ Wind: ${current.windspeed} km/h<br>
+      🕒 Letztes Update: ${current.time.replace("T", " Uhr ")}
+    `;
+
+    const forecast = document.getElementById("forecast");
+    forecast.innerHTML = "";
+
+    const now = new Date();
+    const nowISODate = now.toISOString().slice(0,10);
+
+    // finde "jetzt" im hourly-array (Datum+Stunde)
+    const idx = data.hourly.time.findIndex(t => {
+      const d = new Date(t);
+      return d.getHours() === now.getHours() && t.slice(0,10) === nowISODate;
+    });
+
+    const startIdx = idx >= 0 ? idx : 0;
+
+    for (let i = startIdx; i < startIdx + 12 && i < data.hourly.time.length; i++) {
+      const temp = data.hourly.temperature_2m[i];
+      const wind = data.hourly.windspeed_10m[i];
+      const dir = windDirectionToText(data.hourly.winddirection_10m[i]);
+      const hour = new Date(data.hourly.time[i]).getHours();
+      const time = hour.toString().padStart(2, '0') + " Uhr";
+      let icon = temp >= 25 ? "☀️" : temp < 0 ? "❄️" : hour < 7 || hour > 20 ? "🌙" : "⛅";
+      let timeClass = hour >= 20 || hour < 6 ? "night" : hour >= 17 ? "evening" : "";
+      forecast.innerHTML += `
+        <div class="forecast-card ${timeClass}">
+          <strong>${time}</strong><br>
+          <div style="font-size:22px;">${icon}</div>
+          <div class="${temp >= 20 ? "temp-warm" : "temp-cool"}">${temp}°C</div>
+          💨 ${wind} km/h<br>🧭 ${dir}
+        </div>`;
+    }
+
+    const start = selectedDay * 24;
+    const temps = [], winds = [], rains = [], labels = [];
+    for (let i = start; i < start + 24 && i < data.hourly.time.length; i++) {
+      const hour = new Date(data.hourly.time[i]).getHours().toString().padStart(2, '0') + ":00";
+      labels.push(hour);
+      temps.push(data.hourly.temperature_2m[i]);
+      winds.push(knots(data.hourly.windspeed_10m[i]));
+      rains.push(data.hourly.precipitation[i]);
+    }
+
+    if (tempChart) tempChart.destroy();
+    if (windChart) windChart.destroy();
+    if (rainChart) rainChart.destroy();
+
+    tempChart = new Chart(document.getElementById("tempChart"), {
+      type: "line",
+      data: { labels, datasets: [{ label: "Temperatur (°C)", data: temps, fill: true, tension: 0.3 }] }
+    });
+
+    windChart = new Chart(document.getElementById("windChart"), {
+      type: "line",
+      data: { labels, datasets: [{ label: "Wind (Knoten)", data: winds, fill: true, tension: 0.3 }] }
+    });
+
+    rainChart = new Chart(document.getElementById("rainChart"), {
+      type: "bar",
+      data: { labels, datasets: [{ label: "Niederschlag (mm/h)", data: rains, backgroundColor: "rgba(54, 162, 235, 0.6)" }] },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    const week = document.getElementById("weekly");
+    week.innerHTML = "";
+    for (let i = 0; i < data.daily.time.length; i++) {
+      const day = new Date(data.daily.time[i]).toLocaleDateString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+      const max = data.daily.temperature_2m_max[i];
+      const min = data.daily.temperature_2m_min[i];
+      const rise = data.daily.sunrise[i].split("T")[1];
+      const set = data.daily.sunset[i].split("T")[1];
+      const icon = max >= 25 ? "☀️" : max >= 15 ? "🌤️" : max <= 0 ? "❄️" : "⛅";
+      week.innerHTML += `
+        <div class="day-card">
+          <strong>${day}</strong><br>
+          <div style="font-size:24px;">${icon}</div>
+          🔺 <span class="${max >= 20 ? 'temp-warm' : 'temp-cool'}">${max}°C</span><br>
+          🔻 <span class="${min <= 5 ? 'temp-cool' : ''}">${min}°C</span><br>
+          🌅 ${rise}<br>🌇 ${set}
+        </div>`;
+    }
+  }
+
+  // Header: local + UTC
+  function zeigeDatumUhrzeit() {
+    const jetzt = new Date();
+    const datum = jetzt.toLocaleDateString("de-DE", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+    const zeit = jetzt.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+    document.getElementById("datetime").textContent = `${datum} – ${zeit}`;
+    document.getElementById("utcNow").textContent =
+      jetzt.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  zeigeDatumUhrzeit();
+  setInterval(zeigeDatumUhrzeit, 1000);
+
+  // LOLU sunrise/sunset (coords)
+  async function loadLoluSunTimes() {
+    const lat = 47.918;
+    const lon = 13.799;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset&timezone=auto`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const sr = data?.daily?.sunrise?.[0];
+    const ss = data?.daily?.sunset?.[0];
+    const fmtHM = (iso) => iso ? iso.split("T")[1].slice(0,5) : "--:--";
+    document.getElementById("loluSunrise").textContent = fmtHM(sr);
+    document.getElementById("loluSunset").textContent  = fmtHM(ss);
+  }
+
+  // ===== Custom Ortssuche (Open-Meteo Geocoding) =====
+  async function geocodePlace(q) {
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=de&format=json`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Geocoding fehlgeschlagen");
+    const data = await res.json();
+    return data?.results?.[0] || null;
+  }
+
+  async function searchPlace() {
+    const input = document.getElementById("customPlace");
+    const status = document.getElementById("placeStatus");
+    const q = (input.value || "").trim();
+
+    if (!q) { status.textContent = "Bitte Ort eingeben."; return; }
+    status.textContent = "Suche…";
+
+    try {
+      const r = await geocodePlace(q);
+      if (!r) { status.textContent = "Nichts gefunden."; return; }
+
+      const label = `${r.name}${r.admin1 ? ", " + r.admin1 : ""}${r.country ? " (" + r.country + ")" : ""}`;
+      status.textContent = `Aktiv: ${label}`;
+
+      window.__customCoords = { lat: r.latitude, lon: r.longitude };
+      loadWeather(r.latitude, r.longitude);
+    } catch (e) {
+      status.textContent = "Fehler bei der Suche.";
+    }
+  }
+
+  // Enter key triggers search
+  document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("customPlace");
+    if (input) {
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter") searchPlace();
+      });
+    }
+  });
+
+  // Start (Open-Meteo) + auto refresh
+  loadWeather(DEFAULT_COORDS.lat, DEFAULT_COORDS.lon);
+  setInterval(() => {
+    const c = window.__customCoords || DEFAULT_COORDS;
+    loadWeather(c.lat, c.lon);
+  }, 10 * 60 * 1000);
+
+  // Start (Sun times)
+  loadLoluSunTimes();
+  setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000);
+
+  // =========================
+  // METAR/TAF via Cloudflare Worker (with alerts)
+  // =========================
+  const WX_PROXY = "https://orange-sky-8e02.juergen-sch85.workers.dev";
+
+  async function loadWx(type, icao, mode) {
+    const r = await fetch(`${WX_PROXY}?type=${encodeURIComponent(type)}&icao=${encodeURIComponent(icao)}&mode=${encodeURIComponent(mode)}`);
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  function extractRaw(json) {
+    const d0 = json?.data?.[0];
+    if (!d0) return "";
+    if (typeof d0 === "string") return d0;
+    return d0.raw_text || "";
+  }
+
+  function fmtWindText(m) {
+    const w = m?.wind;
+    if (!w) return { text: "—", spd: null, gst: null };
+    const dir = w.direction || "VRB";
+    const spd = w.speed?.kts ?? null;
+    const gst = w.gust?.kts ?? null;
+    const t = (spd == null) ? `${dir}` : (gst ? `${dir} ${spd}kt G${gst}` : `${dir} ${spd}kt`);
+    return { text: t, spd, gst };
+  }
+
+  function fmtQnh(m) {
+    if (m?.pressure?.hg) return `${Math.round(m.pressure.hg * 33.8639)} hPa`;
+    return "—";
+  }
+
+  function fmtVis(m) {
+    const v = m?.visibility;
+    if (!v) return { text: "—", meters: null };
+    const meters = (typeof v.meters === "number") ? v.meters : null;
+    if (meters && meters !== 9999) return { text: `${meters} m`, meters };
+    return { text: v.text || "—", meters };
+  }
+
+  function pickCeiling(m) {
+    if (m?.ceiling?.feet) return { text: `${m.ceiling.code || ""} ${m.ceiling.feet} ft`.trim(), feet: m.ceiling.feet };
+    const layer = (m?.clouds || []).find(x => ["BKN","OVC"].includes(x.code) && x.feet);
+    return layer ? { text: `${layer.code} ${layer.feet} ft`, feet: layer.feet } : { text: "—", feet: null };
+  }
+
+  function fmtTempDp(m) {
+    const t = m?.temperature?.celsius;
+    const d = m?.dewpoint?.celsius;
+    if (t == null && d == null) return "—";
+    if (t != null && d != null) return `${t}°C / ${d}°C`;
+    return `${t ?? "—"}°C / ${d ?? "—"}°C`;
+  }
+
+  function fmtWx(m) {
+    const c = m?.conditions;
+    if (Array.isArray(c) && c.length) return c.map(x => x.text || x.code).filter(Boolean).join(", ");
+    return m?.wx_codes?.join?.(" ") || "—";
+  }
+
+  function setFlightCategory(cat) {
+    const pill = document.getElementById("wxCatPill");
+    const txt = document.getElementById("wxCatText");
+    const panel = document.getElementById("wxPanel");
+
+    panel.className = "wx-panel";
+    if (!cat) { pill.style.display = "none"; return; }
+
+    txt.textContent = cat;
+    pill.className = "wx-pill " + cat.toLowerCase();
+    pill.style.display = "inline-flex";
+
+    panel.classList.add("cat-" + cat.toLowerCase());
+  }
+
+  function prettyTaf(raw) {
+    if (!raw) return "";
+    return raw.replace(/\s(TEMPO|BECMG|INTER|FM\d{6}|PROB\d{2}|RMK)\s/g, "\n$1 ").trim();
+  }
+
+  function toggleRaw(id) {
+    const el = document.getElementById(id);
+    el.style.maxHeight = el.style.maxHeight ? "" : "90px";
+    el.style.overflow = el.style.overflow ? "" : "hidden";
+  }
+
+  async function copyText(id) {
+    const t = document.getElementById(id)?.textContent || "";
+    try { await navigator.clipboard.writeText(t); }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = t; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  }
+
+  function clearAlerts() {
+    ["kvWind","kvVis","kvCeil","kvQnh","kvTemp","kvWx"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove("warn","crit");
     });
   }
-});
 
-let selectedDay = 0;
-let tempChart, windChart, rainChart;
+  function mark(elId, level) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.classList.remove("warn","crit");
+    if (level) el.classList.add(level);
+  }
 
-function setDay(dayIndex) {
-selectedDay = dayIndex;
-document.querySelectorAll(".buttons button").forEach(btn => btn.classList.remove("button-active"));
-document.getElementById("btn" + dayIndex).classList.add("button-active");
-const loc = locations[document.getElementById("location").value];
-loadWeather(loc.lat, loc.lon);
-}
+  function applyAlerts(m) {
+    clearAlerts();
 
-function switchTab(index) {
-document.querySelectorAll(".tab-button").forEach((btn, i) =>
-btn.classList.toggle("active", i === index)
-);
-document.querySelectorAll(".tab-content").forEach((tab, i) =>
-tab.classList.toggle("active", i === index)
-);
-}
-
-document.getElementById("location").addEventListener("change", () => {
-const loc = locations[document.getElementById("location").value];
-loadWeather(loc.lat, loc.lon);
-});
-
-function knots(kmh) { return +(kmh / 1.852).toFixed(1); }
-
-function windDirectionToText(degree) {
-const dirs = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
-return dirs[Math.round(degree / 45) % 8];
-}
-
-async function loadWeather(lat, lon) {
-const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,windspeed_10m,winddirection_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&timezone=auto`;
-const res = await fetch(url);
-const data = await res.json();
-
-const current = data.current_weather;
-document.getElementById('current-weather').innerHTML = `
-       🌡️ Temperatur: ${current.temperature}°C<br>
-       🌬️ Wind: ${current.windspeed} km/h<br>
-       🕒 Letztes Update: ${current.time.replace("T", " Uhr ")}
-     `;
-
-const forecast = document.getElementById("forecast");
-forecast.innerHTML = "";
-const nowHour = new Date().getHours();
-const index = data.hourly.time.findIndex(t => new Date(t).getHours() === nowHour);
-for (let i = index; i < index + 12; i++) {
-const temp = data.hourly.temperature_2m[i];
-const wind = data.hourly.windspeed_10m[i];
-const dir = windDirectionToText(data.hourly.winddirection_10m[i]);
-const hour = new Date(data.hourly.time[i]).getHours();
-const time = hour.toString().padStart(2, '0') + " Uhr";
-let icon = temp >= 25 ? "☀️" : temp < 0 ? "❄️" : hour < 7 || hour > 20 ? "🌙" : "⛅";
-let timeClass = hour >= 20 || hour < 6 ? "night" : hour >= 17 ? "evening" : "";
-forecast.innerHTML += `
-         <div class="forecast-card ${timeClass}">
-           <strong>${time}</strong><br>
-           <div style="font-size:22px;">${icon}</div>
-           <div class="${temp >= 20 ? "temp-warm" : "temp-cool"}">${temp}°C</div>
-           💨 ${wind} km/h<br>🧭 ${dir}
-         </div>`;
-}
-
-const start = selectedDay * 24;
-const temps = [], winds = [], rains = [], labels = [];
-for (let i = start; i < start + 24; i++) {
-const hour = new Date(data.hourly.time[i]).getHours().toString().padStart(2, '0') + ":00";
-labels.push(hour);
-temps.push(data.hourly.temperature_2m[i]);
-winds.push(knots(data.hourly.windspeed_10m[i]));
-rains.push(data.hourly.precipitation[i]);
-}
-
-if (tempChart) tempChart.destroy();
-if (windChart) windChart.destroy();
-if (rainChart) rainChart.destroy();
-
-tempChart = new Chart(document.getElementById("tempChart"), {
-type: "line",
-data: { labels, datasets: [{ label: "Temperatur (°C)", data: temps, fill: true, tension: 0.3 }] }
-});
-
-windChart = new Chart(document.getElementById("windChart"), {
-type: "line",
-data: { labels, datasets: [{ label: "Wind (Knoten)", data: winds, fill: true, tension: 0.3 }] }
-});
-
-rainChart = new Chart(document.getElementById("rainChart"), {
-type: "bar",
-data: {
-labels,
-datasets: [{ label: "Niederschlag (mm/h)", data: rains, backgroundColor: "rgba(54, 162, 235, 0.6)" }]
-},
-options: { responsive: true, scales: { y: { beginAtZero: true } } }
-});
-
-const week = document.getElementById("weekly");
-week.innerHTML = "";
-for (let i = 0; i < data.daily.time.length; i++) {
-const day = new Date(data.daily.time[i]).toLocaleDateString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit' });
-const max = data.daily.temperature_2m_max[i];
-const min = data.daily.temperature_2m_min[i];
-const rise = data.daily.sunrise[i].split("T")[1];
-const set = data.daily.sunset[i].split("T")[1];
-const icon = max >= 25 ? "☀️" : max >= 15 ? "🌤️" : max <= 0 ? "❄️" : "⛅";
-week.innerHTML += `
-         <div class="day-card">
-           <strong>${day}</strong><br>
-           <div style="font-size:24px;">${icon}</div>
-           🔺 <span class="${max >= 20 ? 'temp-warm' : 'temp-cool'}">${max}°C</span><br>
-           🔻 <span class="${min <= 5 ? 'temp-cool' : ''}">${min}°C</span><br>
-           🌅 ${rise}<br>🌇 ${set}
-         </div>`;
-}
-}
-
-    // Datum + Uhrzeit live
-    // Header: Datum/Uhrzeit lokal + UTC
-function zeigeDatumUhrzeit() {
-const jetzt = new Date();
-const datum = jetzt.toLocaleDateString("de-DE", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
-const zeit = jetzt.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-document.getElementById("datetime").textContent = `${datum} – ${zeit}`;
-
-      // UTC time now (Zulu)
-document.getElementById("utcNow").textContent =
-       jetzt.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        jetzt.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
-}
-zeigeDatumUhrzeit();
-setInterval(zeigeDatumUhrzeit, 1000);
-    loadLoluSunTimes();
-setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000); // alle 6 Stunden reicht locker
-
-    // LOLU sunrise/sunset (based on Gmunden/LOLU coords)
-async function loadLoluSunTimes() {
-  // LOLU ~ Gmunden (deine Koordinaten)
-  const lat = 47.918;
-  const lon = 13.799;
-
-  // sunrise/sunset für heute (Timezone = auto -> lokale Zeit vor Ort)
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset&timezone=auto`;
-  const res = await fetch(url);
-  const data = await res.json();
-      const lat = 47.918;
-      const lon = 13.799;
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset&timezone=auto`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-  const sr = data?.daily?.sunrise?.[0]; // z.B. "2026-02-25T07:01"
-  const ss = data?.daily?.sunset?.[0];
-      const sr = data?.daily?.sunrise?.[0]; // "YYYY-MM-DDTHH:MM"
-      const ss = data?.daily?.sunset?.[0];
-
-  const fmtHM = (iso) => iso ? iso.split("T")[1].slice(0,5) : "--:--";
-      const fmtHM = (iso) => iso ? iso.split("T")[1].slice(0,5) : "--:--";
-
-  document.getElementById("loluSunrise").textContent = fmtHM(sr);
-  document.getElementById("loluSunset").textContent  = fmtHM(ss);
-      document.getElementById("loluSunrise").textContent = fmtHM(sr);
-      document.getElementById("loluSunset").textContent  = fmtHM(ss);
+    const ceil = pickCeiling(m);
+    if (ceil.feet != null) {
+      if (ceil.feet < 800) mark("kvCeil", "crit");
+      else if (ceil.feet < 1500) mark("kvCeil", "warn");
     }
 
-    // Start
-    // Start (Open-Meteo)
-loadWeather(locations["Gmunden"].lat, locations["Gmunden"].lon);
-setInterval(() => {
-const loc = locations[document.getElementById("location").value];
-if (loc) loadWeather(loc.lat, loc.lon);
-}, 10 * 60 * 1000);
+    const w = fmtWindText(m);
+    if (w.gst != null) {
+      if (w.gst >= 35) mark("kvWind", "crit");
+      else if (w.gst >= 25) mark("kvWind", "warn");
+    } else if (w.spd != null) {
+      if (w.spd >= 25) mark("kvWind", "crit");
+      else if (w.spd >= 15) mark("kvWind", "warn");
+    }
 
-    // Start (Sun times) + occasional refresh
-    loadLoluSunTimes();
-    setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000);
+    const v = fmtVis(m);
+    if (v.meters != null && v.meters !== 9999) {
+      if (v.meters < 1500) mark("kvVis", "crit");
+      else if (v.meters < 5000) mark("kvVis", "warn");
+    }
+  }
 
-// =========================
-// METAR/TAF via Cloudflare Worker (with alerts)
-// =========================
-const WX_PROXY = "https://orange-sky-8e02.juergen-sch85.workers.dev";
+  async function updateMetarTafNative() {
+    const icao = document.getElementById("metarSelect").value;
+    const hintEl = document.getElementById("wxHint");
+    const tafNote = document.getElementById("wxTafNote");
 
-async function loadWx(type, icao, mode) {
-const r = await fetch(`${WX_PROXY}?type=${encodeURIComponent(type)}&icao=${encodeURIComponent(icao)}&mode=${encodeURIComponent(mode)}`);
-if (!r.ok) throw new Error(await r.text());
-return r.json();
-}
+    hintEl.textContent = "";
+    tafNote.textContent = "";
+    document.getElementById("wxStation").textContent = icao;
 
-function extractRaw(json) {
-const d0 = json?.data?.[0];
-if (!d0) return "";
-if (typeof d0 === "string") return d0;     // TAF raw
-return d0.raw_text || "";                  // METAR raw_text
-}
+    try {
+      const metarJson = await loadWx("metar", icao, "decoded");
+      const m = metarJson?.data?.[0];
 
-function fmtWindText(m) {
-const w = m?.wind;
-if (!w) return { text: "—", spd: null, gst: null };
-const dir = w.direction || "VRB";
-const spd = w.speed?.kts ?? null;
-const gst = w.gust?.kts ?? null;
-const t = (spd == null) ? `${dir}` : (gst ? `${dir} ${spd}kt G${gst}` : `${dir} ${spd}kt`);
-return { text: t, spd, gst };
-}
+      const tafJson = await loadWx("taf", icao, "raw");
+      const tafText = extractRaw(tafJson);
 
-function fmtQnh(m) {
-if (m?.pressure?.hg) return `${Math.round(m.pressure.hg * 33.8639)} hPa`;
-return "—";
-}
+      document.getElementById("metarRaw").textContent = m?.raw_text || "(kein METAR)";
+      document.getElementById("tafRaw").textContent = tafText ? prettyTaf(tafText) : "(kein TAF)";
 
-function fmtVis(m) {
-const v = m?.visibility;
-if (!v) return { text: "—", meters: null };
-const meters = (typeof v.meters === "number") ? v.meters : null;
-if (meters && meters !== 9999) return { text: `${meters} m`, meters };
-      // if only miles/text:
-return { text: v.text || "—", meters };
-}
+      document.getElementById("wxObs").textContent = m?.observed ? m.observed.replace("T"," ").replace("Z","Z") : "—";
+      document.getElementById("wxStation").textContent = m?.station?.icao || icao;
 
-function pickCeiling(m) {
-if (m?.ceiling?.feet) return { text: `${m.ceiling.code || ""} ${m.ceiling.feet} ft`.trim(), feet: m.ceiling.feet };
-const layer = (m?.clouds || []).find(x => ["BKN","OVC"].includes(x.code) && x.feet);
-return layer ? { text: `${layer.code} ${layer.feet} ft`, feet: layer.feet } : { text: "—", feet: null };
-}
+      const wind = fmtWindText(m);
+      const vis = fmtVis(m);
+      const ceil = pickCeiling(m);
 
-function fmtTempDp(m) {
-const t = m?.temperature?.celsius;
-const d = m?.dewpoint?.celsius;
-if (t == null && d == null) return "—";
-if (t != null && d != null) return `${t}°C / ${d}°C`;
-return `${t ?? "—"}°C / ${d ?? "—"}°C`;
-}
+      document.getElementById("wxWind").textContent = wind.text;
+      document.getElementById("wxVis").textContent = vis.text;
+      document.getElementById("wxCeil").textContent = ceil.text;
+      document.getElementById("wxQnh").textContent = fmtQnh(m);
+      document.getElementById("wxTempDp").textContent = fmtTempDp(m);
+      document.getElementById("wxWx").textContent = fmtWx(m);
 
-function fmtWx(m) {
-const c = m?.conditions;
-if (Array.isArray(c) && c.length) return c.map(x => x.text || x.code).filter(Boolean).join(", ");
-return m?.wx_codes?.join?.(" ") || "—";
-}
+      setFlightCategory(m?.flight_category);
+      applyAlerts(m);
 
-function setFlightCategory(cat) {
-const pill = document.getElementById("wxCatPill");
-const txt = document.getElementById("wxCatText");
-const panel = document.getElementById("wxPanel");
-const metarCard = document.getElementById("wxMetarCard");
+      if (!m?.raw_text || !tafText) hintEl.textContent = "Hinweis: Wenn keine Reports verfügbar sind, anderen Flugplatz wählen.";
+      if (tafText) tafNote.textContent = "TAF ist umgebrochen (TEMPO/BECMG/PROB/FM …).";
 
-      // reset classes
-panel.className = "wx-panel";
-metarCard.className = "wx-card";
+      document.getElementById("metarRaw").style.maxHeight = "90px";
+      document.getElementById("metarRaw").style.overflow = "hidden";
+      document.getElementById("tafRaw").style.maxHeight = "180px";
+      document.getElementById("tafRaw").style.overflow = "hidden";
+    } catch (e) {
+      setFlightCategory(null);
+      clearAlerts();
+      document.getElementById("wxObs").textContent = "—";
+      document.getElementById("wxWind").textContent = "—";
+      document.getElementById("wxVis").textContent = "—";
+      document.getElementById("wxCeil").textContent = "—";
+      document.getElementById("wxQnh").textContent = "—";
+      document.getElementById("wxTempDp").textContent = "—";
+      document.getElementById("wxWx").textContent = "—";
+      document.getElementById("metarRaw").textContent = "";
+      document.getElementById("tafRaw").textContent = "";
+      hintEl.textContent = "Fehler beim Laden: " + String(e);
+    }
+  }
 
-if (!cat) {
-pill.style.display = "none";
-return;
-}
-txt.textContent = cat;
-pill.className = "wx-pill " + cat.toLowerCase();
-pill.style.display = "inline-flex";
-
-panel.classList.add("cat-" + cat.toLowerCase());
-metarCard.classList.add("cat-" + cat.toLowerCase());
-}
-
-function prettyTaf(raw) {
-if (!raw) return "";
-return raw
-.replace(/\s(TEMPO|BECMG|INTER|FM\d{6}|PROB\d{2}|RMK)\s/g, "\n$1 ")
-.trim();
-}
-
-function toggleRaw(id) {
-const el = document.getElementById(id);
-el.style.maxHeight = el.style.maxHeight ? "" : "90px";
-el.style.overflow = el.style.overflow ? "" : "hidden";
-}
-
-async function copyText(id) {
-const t = document.getElementById(id)?.textContent || "";
-try { await navigator.clipboard.writeText(t); }
-catch {
-const ta = document.createElement("textarea");
-ta.value = t; document.body.appendChild(ta);
-ta.select(); document.execCommand("copy");
-document.body.removeChild(ta);
-}
-}
-
-function clearAlerts() {
-["kvWind","kvVis","kvCeil","kvQnh","kvTemp","kvWx"].forEach(id => {
-const el = document.getElementById(id);
-if (el) { el.classList.remove("warn","crit"); }
-});
-}
-
-function mark(elId, level) {
-const el = document.getElementById(elId);
-if (!el) return;
-el.classList.remove("warn","crit");
-if (level) el.classList.add(level);
-}
-
-function applyAlerts(m) {
-clearAlerts();
-
-// Ceiling thresholds (ft)
-const ceil = pickCeiling(m);
-if (ceil.feet != null) {
-if (ceil.feet < 800) mark("kvCeil", "crit");
-else if (ceil.feet < 1500) mark("kvCeil", "warn");
-}
-
-// Wind/Gust thresholds (kt)
-const w = fmtWindText(m);
-if (w.gst != null) {
-if (w.gst >= 35) mark("kvWind", "crit");
-else if (w.gst >= 25) mark("kvWind", "warn");
-} else if (w.spd != null) {
-if (w.spd >= 25) mark("kvWind", "crit");
-else if (w.spd >= 15) mark("kvWind", "warn");
-}
-
-// Visibility thresholds (m)
-const v = fmtVis(m);
-if (v.meters != null && v.meters !== 9999) {
-if (v.meters < 1500) mark("kvVis", "crit");
-else if (v.meters < 5000) mark("kvVis", "warn");
-}
-}
-
-async function updateMetarTafNative() {
-const icao = document.getElementById("metarSelect").value;
-const hintEl = document.getElementById("wxHint");
-const tafNote = document.getElementById("wxTafNote");
-
-hintEl.textContent = "";
-tafNote.textContent = "";
-document.getElementById("wxStation").textContent = icao;
-
-try {
-const metarJson = await loadWx("metar", icao, "decoded");
-const m = metarJson?.data?.[0];
-
-const tafJson = await loadWx("taf", icao, "raw");
-const tafText = extractRaw(tafJson);
-
-document.getElementById("metarRaw").textContent = m?.raw_text || "(kein METAR)";
-document.getElementById("tafRaw").textContent = tafText ? prettyTaf(tafText) : "(kein TAF)";
-
-document.getElementById("wxObs").textContent = m?.observed ? m.observed.replace("T"," ").replace("Z","Z") : "—";
-document.getElementById("wxStation").textContent = m?.station?.icao || icao;
-
-const wind = fmtWindText(m);
-const vis = fmtVis(m);
-const ceil = pickCeiling(m);
-
-document.getElementById("wxWind").textContent = wind.text;
-document.getElementById("wxVis").textContent = vis.text;
-document.getElementById("wxCeil").textContent = ceil.text;
-document.getElementById("wxQnh").textContent = fmtQnh(m);
-document.getElementById("wxTempDp").textContent = fmtTempDp(m);
-document.getElementById("wxWx").textContent = fmtWx(m);
-
-setFlightCategory(m?.flight_category);
-applyAlerts(m);
-
-if (!m?.raw_text || !tafText) {
-hintEl.textContent = "Hinweis: Wenn keine Reports verfügbar sind, anderen Flugplatz wählen.";
-}
-if (tafText) tafNote.textContent = "TAF ist umgebrochen (TEMPO/BECMG/PROB/FM …).";
-
-// collapse by default
-document.getElementById("metarRaw").style.maxHeight = "90px";
-document.getElementById("metarRaw").style.overflow = "hidden";
-document.getElementById("tafRaw").style.maxHeight = "180px";
-document.getElementById("tafRaw").style.overflow = "hidden";
-
-} catch (e) {
-setFlightCategory(null);
-clearAlerts();
-document.getElementById("wxObs").textContent = "—";
-document.getElementById("wxWind").textContent = "—";
-document.getElementById("wxVis").textContent = "—";
-document.getElementById("wxCeil").textContent = "—";
-document.getElementById("wxQnh").textContent = "—";
-document.getElementById("wxTempDp").textContent = "—";
-document.getElementById("wxWx").textContent = "—";
-document.getElementById("metarRaw").textContent = "";
-document.getElementById("tafRaw").textContent = "";
-hintEl.textContent = "Fehler beim Laden: " + String(e);
-}
-}
-
-document.getElementById("metarSelect").addEventListener("change", updateMetarTafNative);
-updateMetarTafNative();
-setInterval(updateMetarTafNative, 10 * 60 * 1000);
+  document.getElementById("metarSelect").addEventListener("change", updateMetarTafNative);
+  updateMetarTafNative();
+  setInterval(updateMetarTafNative, 10 * 60 * 1000);
 </script>
+
 </div>
 </body>
 </html>
