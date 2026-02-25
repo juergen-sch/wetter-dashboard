@@ -6,12 +6,98 @@
 <title>Weather-Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 0; }
-  .container { width: 95%; max-width: 1300px; margin: 20px auto; background: #fff; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-  h1, h2 { color: #333; margin-top: 1em; }
+  :root{
+    --bg:#f0f0f0;
+    --card:#ffffff;
+    --muted:#667085;
+    --text:#1f2937;
+    --line:rgba(0,0,0,0.10);
+    --shadow:0 2px 12px rgba(0,0,0,0.06);
+    --radius:14px;
+    --accent:#007BFF;
+  }
+
+  body { font-family: Arial, sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); }
+  .container { width: 95%; max-width: 1300px; margin: 20px auto; background: var(--card); padding: 18px; box-shadow: var(--shadow); border-radius: var(--radius); }
+  h1, h2, h3, h4 { color: #111827; margin-top: 1em; }
+  a{ color: inherit; }
   select, button { padding: 6px 12px; font-size: 16px; margin: 10px 5px 20px 0; }
 
-  /* ===== Top controls (nur Suche) ===== */
+  /* ===== Header ===== */
+  .header{
+    display:flex;
+    gap: 14px;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    margin-bottom: 12px;
+  }
+  .header h1{
+    margin:0;
+    font-size: 22px;
+    letter-spacing: .2px;
+  }
+  .header .timebox{
+    text-align:right;
+    color:#555;
+    line-height:1.25;
+    min-width: 250px;
+  }
+  .header .timebox #datetime{ font-size: 1rem; }
+  .header .timebox .subline{ font-size:0.92rem; opacity:.92; }
+
+  /* ===== Main Tabs ===== */
+  .main-tabs{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .main-tab-btn{
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.08);
+    cursor: pointer;
+    margin: 0;
+    font-size: 14px;
+  }
+  .main-tab-btn.active{
+    background: var(--accent);
+    color: #fff;
+    border-color: rgba(0,0,0,0.0);
+  }
+  .main-section{ display:none; }
+  .main-section.active{ display:block; }
+
+  /* ===== Cards / Layout ===== */
+  .card{
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+  }
+  .grid-landing{
+    display:grid;
+    grid-template-columns: 1fr 390px;
+    gap: 16px;
+    align-items:start;
+  }
+  .grid-landing > div{ min-width:0; }
+
+  .right-stack{ display:flex; flex-direction:column; gap:16px; align-items:stretch; }
+  .weekly{ min-width:0; }
+  .forecast{ min-width:0; }
+
+  .wx-quick{
+    display:grid;
+    gap: 14px;
+  }
+
+  /* ===== Top controls (Suche) ===== */
   .top-controls{
     display:flex;
     gap:12px;
@@ -31,7 +117,7 @@
   .top-controls .searchrow{ display:flex; gap:8px; align-items:center; }
   .top-controls input{
     flex:1; padding: 6px 10px; border: 1px solid rgba(0,0,0,0.18);
-    border-radius: 8px; outline: none;
+    border-radius: 12px; outline: none;
   }
   .top-controls input:focus{
     border-color: rgba(0,123,255,0.5);
@@ -39,12 +125,12 @@
   }
   .top-controls button{
     padding: 7px 12px; border: 1px solid rgba(0,0,0,0.18);
-    background: rgba(255,255,255,0.9); border-radius: 8px; cursor:pointer;
+    background: rgba(255,255,255,0.9); border-radius: 12px; cursor:pointer;
   }
   .top-controls button:hover{ filter: brightness(0.98); }
   #placeStatus{ font-size:12px; color:#666; min-height: 16px; }
 
-  /* ===== FIX: Forecast layout ===== */
+  /* ===== Forecast layout ===== */
   .forecast { display:block; }
   .weekly { display:flex; overflow-x:auto; gap:10px; padding-bottom:10px; max-width:100%; }
   .weekly::-webkit-scrollbar{ height:10px; }
@@ -52,64 +138,92 @@
   .weekly::-webkit-scrollbar-track{ background: rgba(0,0,0,0.08); border-radius:999px; }
 
   .forecast-card, .day-card {
-    flex: 0 0 auto; background: #f8f8f8; padding: 10px; border-radius: 8px;
-    text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1); width: 120px;
+    flex: 0 0 auto; background: #f8f8f8; padding: 10px; border-radius: 12px;
+    text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); width: 120px;
+    border: 1px solid rgba(0,0,0,0.06);
   }
   .forecast-card.night { background-color: #dde3ea; }
   .forecast-card.evening { background-color: #f0e0d0; }
   .temp-warm { color: darkred; font-weight: bold; }
   .temp-cool { color: steelblue; font-weight: bold; }
-  .buttons button.button-active { background: #007BFF; color: white; }
 
-  canvas { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-
-  .tabs { display: flex; margin-bottom: 10px; }
-  .tab-button {
-    padding: 10px 20px; background: #eee; cursor: pointer; margin-right: 5px;
-    border-radius: 5px 5px 0 0;
+  .buttons{ margin-top: 10px; }
+  .buttons button{
+    border: 1px solid rgba(0,0,0,0.18);
+    background: rgba(255,255,255,0.9);
+    border-radius: 12px;
+    cursor:pointer;
+    margin: 0 8px 10px 0;
   }
-  .tab-button.active { background: #007BFF; color: white; }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
+  .buttons button.button-active { background: var(--accent); color: white; border-color: rgba(0,0,0,0.0); }
 
-  .webcams {
-    display: flex; flex-wrap: wrap; gap: 20px; margin-top: 30px; justify-content: space-between;
-  }
-  .webcam { flex: 1 1 48%; display: flex; flex-direction: column; align-items: center; }
-  .webcam img, .webcam iframe, .webcam video {
-    width: 100%; height: 400px; object-fit: cover;
-    border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
+  canvas { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
 
-  /* ===== Top weather + embed two-column layout ===== */
-  .top-wx-layout{
-    display:grid;
-    grid-template-columns: 1fr 380px;
-    gap: 18px;
-    align-items:start;
-    margin-top: 8px;
+  /* ===== Chart Tabs (nur für Charts) ===== */
+  .chart-tabs { display: flex; margin-bottom: 10px; gap: 6px; flex-wrap:wrap; }
+  .chart-tab-button {
+    padding: 10px 14px; background: #eee; cursor: pointer; border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+    user-select:none;
   }
-  .top-wx-layout > div { min-width: 0; } /* wichtig: erlaubt Shrink, sonst overflow */
+  .chart-tab-button.active { background: var(--accent); color: white; border-color: rgba(0,0,0,0.0); }
+  .chart-tab-content { display: none; }
+  .chart-tab-content.active { display: block; }
 
+  /* ===== Landing Embed box ===== */
   .embed-box{
-    justify-self:end;
-    width: 380px;
+    width: 390px;
     max-width: 100%;
     background: #fff;
-    border-radius: 12px;
+    border-radius: var(--radius);
     border: 1px solid rgba(0,0,0,0.08);
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    padding: 10px;
+    padding: 12px;
   }
   .embed-box .embed-title{
     font-size: 14px;
     font-weight: 700;
     color:#333;
-    margin: 2px 0 8px 0;
+    margin: 2px 0 10px 0;
   }
   .embed-box a{ margin:0 !important; }
 
-  /* ===== METAR/TAF PRO PANEL ===== */
+  /* ===== CTA Button ===== */
+  .cta-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 6px; }
+  .cta{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    text-decoration:none;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(0,123,255,0.18);
+  }
+  .cta.secondary{
+    background: rgba(0,0,0,0.06);
+    color: #111827;
+    box-shadow:none;
+    border: 1px solid rgba(0,0,0,0.10);
+    font-weight: 600;
+  }
+
+  /* ===== Webcams ===== */
+  .webcams {
+    display: flex; flex-wrap: wrap; gap: 20px; margin-top: 12px; justify-content: space-between;
+  }
+  .webcam { flex: 1 1 48%; display: flex; flex-direction: column; align-items: center; }
+  .webcam img, .webcam iframe, .webcam video {
+    width: 100%; height: 400px; object-fit: cover;
+    border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.08);
+    background:#fff;
+  }
+
+  /* ===== METAR/TAF PRO PANEL (unverändert, nur leicht an Variablen angepasst) ===== */
   .wx-panel {
     margin-top: 10px;
     padding: 14px;
@@ -217,8 +331,8 @@
   @media (max-width: 900px) {
     .wx-grid { grid-template-columns: 1fr; }
     .wx-kv { grid-template-columns: 1fr 1fr; }
-    .top-wx-layout{ grid-template-columns: 1fr; }
-    .embed-box{ justify-self: start; width: 100%; }
+    .grid-landing{ grid-template-columns: 1fr; }
+    .embed-box{ width: 100%; }
   }
 
   @media (max-width: 768px) {
@@ -226,22 +340,23 @@
     .webcam { flex: 1 1 100%; }
     .forecast-card, .day-card { width: 100px; }
     canvas { width: 100% !important; height: auto !important; }
-    .tabs { flex-wrap: wrap; }
-    .tab-button { flex: 1 1 100%; margin-bottom: 5px; }
+    .chart-tabs { flex-wrap: wrap; }
+    .chart-tab-button { flex: 1 1 100%; }
     .buttons button { width: 100%; margin-bottom: 10px; }
-    .top-controls button{ width:auto; }
+    .header .timebox{ text-align:left; }
   }
 </style>
 </head>
 
 <body>
 <div class="container">
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <h1 style="text-align: center; flex: 1; margin: 0;">Weather-Dashboard</h1>
 
-    <div style="text-align:right; color:#555; line-height:1.25;">
-      <div id="datetime" style="font-size: 1rem;"></div>
-      <div style="font-size:0.92rem; opacity:.92;">
+  <!-- ===== Header ===== -->
+  <div class="header">
+    <h1>Weather-Dashboard</h1>
+    <div class="timebox">
+      <div id="datetime"></div>
+      <div class="subline">
         UTC: <strong id="utcNow">--:--:--</strong> ·
         LOLU SR: <strong id="loluSunrise">--:--</strong> ·
         SS: <strong id="loluSunset">--:--</strong>
@@ -249,164 +364,303 @@
     </div>
   </div>
 
-  <div class="top-controls">
-    <div class="block">
-      <label for="customPlace">Ort suchen (Standard ist Gmunden):</label>
-      <div class="searchrow">
-        <input id="customPlace" type="text" placeholder="z. B. Traunkirchen, Wien, LOWW…">
-        <button type="button" onclick="searchPlace()">Suchen</button>
-      </div>
-      <div id="placeStatus"></div>
-    </div>
+  <!-- ===== Main Navigation ===== -->
+  <div class="main-tabs" role="tablist" aria-label="Navigation">
+    <button class="main-tab-btn active" id="mainBtnLanding" type="button" onclick="switchMainTab('landing')">🏠 Landing</button>
+    <button class="main-tab-btn" id="mainBtnWetter" type="button" onclick="switchMainTab('wetter')">🌦️ Wetter</button>
+    <button class="main-tab-btn" id="mainBtnWebcams" type="button" onclick="switchMainTab('webcams')">📷 Webcams</button>
+    <button class="main-tab-btn" id="mainBtnTools" type="button" onclick="switchMainTab('tools')">✈️ Pilotentools</button>
   </div>
 
-  <div class="buttons">
-    <button class="button-active" id="btn0" onclick="setDay(0)">Heute</button>
-    <button id="btn1" onclick="setDay(1)">Morgen</button>
-    <button id="btn2" onclick="setDay(2)">Übermorgen</button>
-  </div>
+  <!-- =========================
+       LANDINGPAGE (Default)
+       ========================= -->
+  <section id="section-landing" class="main-section active">
+    <div class="grid-landing">
+      <div class="wx-quick">
 
-  <div class="top-wx-layout">
-    <div>
-      <div class="weather">
-        <h2>Aktuelles Wetter</h2>
-        <p id="current-weather">Lade Daten...</p>
-      </div>
+        <div class="card">
+          <h2 style="margin-top:0;">Aktuelles Wetter – Gmunden</h2>
+          <p id="landing-current-weather">Lade Daten...</p>
 
-      <div class="forecast">
-        <h2>12-Stunden-Vorhersage</h2>
-        <div class="weekly" id="forecast"></div>
-      </div>
-    </div>
-
-    <div class="embed-box">
-      <div class="embed-title">METAR/TAF Widget (LOLU/LOWL)</div>
-
-      <!-- EXAKT dein Embed -->
-      <a href="https://metar-taf.com/metar/LOLU?station_id=LOWL" id="metartaf-UhKGzHpO" style="font-size:18px; font-weight:500; color:#000; width:350px; height:278px; display:block">METAR Gmunden-Laakirchen Airfield</a>
-<script async defer crossorigin="anonymous" src="https://metar-taf.com/embed-js/LOLU?u=68055&bg_color=ffffff&station_id=LOWL&layout=landscape&qnh=hPa&rh=rh&target=UhKGzHpO"></script>
-      <!-- /Embed -->
-    </div>
-  </div>
-
-  <h2>🔍 Wetterverläufe (24h)</h2>
-  <div class="tabs">
-    <div class="tab-button active" onclick="switchTab(0)">🌡️ Temperatur</div>
-    <div class="tab-button" onclick="switchTab(1)">💨 Wind (Knoten)</div>
-    <div class="tab-button" onclick="switchTab(2)">🌧️ Regen (mm)</div>
-    <div class="tab-button" onclick="switchTab(3)">👁️ Sichtweite</div>
-  </div>
-
-  <div class="tab-content active"><canvas height="100" id="tempChart"></canvas></div>
-  <div class="tab-content"><canvas height="100" id="windChart"></canvas></div>
-  <div class="tab-content"><canvas height="100" id="rainChart"></canvas></div>
-
-  <div class="daily">
-    <h2>Wochenübersicht</h2>
-    <div class="weekly" id="weekly"></div>
-  </div>
-
-  <div class="tab-content">
-    <iframe allowfullscreen="" frameborder="0" height="500"
-      src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=visibility&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true"
-      style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%"></iframe>
-  </div>
-
-  <h2>🛰️ Interaktives Wetterradar (Wind, Regen &amp; Temperatur – Windy)</h2>
-  <iframe allowfullscreen="" frameborder="0" height="500"
-    src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=wind&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true"
-    style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%"></iframe>
-
-  <div class="webcams">
-    <div class="webcam">
-      <h2>Gmunden Süd-West</h2>
-      <img alt="Webcam SW" src="https://www.fliegerclub-traunsee.at/cams/image-west000M.jpg"/>
-    </div>
-    <div class="webcam">
-      <h2>Gmunden Osten</h2>
-      <img alt="Webcam Ost" src="https://www.fliegerclub-traunsee.at/cams/image-ost000.jpg"/>
-    </div>
-    <div class="webcam">
-      <h2>Schafberg (Panomax)</h2>
-      <iframe allowfullscreen="" frameborder="0" src="https://schafberg.panomax.com/"></iframe>
-    </div>
-    <div class="webcam">
-      <h2>🌄 Panoramablick vom Lichtenberg</h2>
-      <iframe allowfullscreen="" frameborder="0" height="600" src="https://lichtenberg.panomax.com/" width="100%"></iframe>
-    </div>
-  </div>
-
-  <h2>✈️ Pilotentools</h2>
-  <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
-    <a href="https://www.homebriefing.com/cms-acg/opencms/de/home/" style="text-decoration: none;" target="_blank">📝 Homebriefing (ACG)</a>
-    <a href="https://onres24.com/login.php" style="text-decoration: none;" target="_blank">📅 onres24 (Login)</a>
-    <a href="https://metar-taf.com/" target="_blank">📡 METAR/TAF Übersicht</a>
-    <a href="https://eaip.austrocontrol.at/" style="text-decoration: none;" target="_blank">📘 eAIP Austria</a>
-  </div>
-
-  <h2>📡 METAR / TAF (Flugwetter Österreich)</h2>
-  <label for="metarSelect">Flugplatz wählen:</label>
-  <select id="metarSelect" style="margin-bottom: 10px;">
-    <option value="LOAV">LOAV – Vöslau</option>
-    <option value="LOWL">LOWL – Linz</option>
-    <option value="LOWW">LOWW – Wien</option>
-    <option value="LOWG">LOWG – Graz</option>
-    <option value="LOWK">LOWK – Klagenfurt</option>
-    <option value="LOWI">LOWI – Innsbruck</option>
-  </select>
-
-  <div id="wxPanel" class="wx-panel">
-    <div class="wx-topline">
-      <h3 class="wx-title">📡 METAR / TAF</h3>
-
-      <div class="wx-badges">
-        <span id="wxCatPill" class="wx-pill" style="display:none;">
-          <strong id="wxCatText"></strong>
-        </span>
-        <span class="wx-pill">Station: <strong id="wxStation">—</strong></span>
-        <span class="wx-pill">Stand (UTC): <strong id="wxObs">—</strong></span>
-      </div>
-    </div>
-
-    <div class="wx-grid">
-      <div id="wxMetarCard" class="wx-card">
-        <h4>
-          <span>METAR</span>
-          <div class="wx-actions">
-            <button class="wx-btn" type="button" onclick="copyText('metarRaw')">Copy</button>
-            <button class="wx-btn" type="button" onclick="toggleRaw('metarRaw')">Raw</button>
+          <div class="cta-row">
+            <a class="cta" href="https://onres24.com/login.php" target="_blank" rel="noopener">📅 ONRES öffnen</a>
+            <button class="cta secondary" type="button" onclick="switchMainTab('wetter')">➡ Details im Wetter-Tab</button>
           </div>
-        </h4>
-
-        <div class="wx-kv">
-          <div id="kvWind" class="item"><div class="label">Wind</div><div class="value" id="wxWind">—</div></div>
-          <div id="kvVis" class="item"><div class="label">Sicht</div><div class="value" id="wxVis">—</div></div>
-          <div id="kvCeil" class="item"><div class="label">Ceiling</div><div class="value" id="wxCeil">—</div></div>
-          <div id="kvQnh" class="item"><div class="label">QNH</div><div class="value" id="wxQnh">—</div></div>
-          <div id="kvTemp" class="item"><div class="label">Temp / DP</div><div class="value" id="wxTempDp">—</div></div>
-          <div id="kvWx" class="item"><div class="label">Wetter</div><div class="value" id="wxWx">—</div></div>
         </div>
 
-        <pre id="metarRaw" class="wx-raw">Lade METAR…</pre>
-        <div id="wxHint" class="wx-subtle"></div>
+        <div class="card forecast">
+          <h2 style="margin-top:0;">12-Stunden-Vorhersage – Flugplatz Gmunden</h2>
+          <div class="weekly" id="landing-forecast" style="max-width:100%; overflow-x:auto; overflow-y:hidden;"></div>
+        </div>
+
+        <div class="card">
+          <h2 style="margin-top:0;">Webcams Flugplatz Gmunden</h2>
+          <div class="webcams">
+            <div class="webcam">
+              <h3>Gmunden Süd-West</h3>
+              <img alt="Webcam SW" src="https://www.fliegerclub-traunsee.at/cams/image-west000M.jpg"/>
+            </div>
+            <div class="webcam">
+              <h3>Gmunden Osten</h3>
+              <img alt="Webcam Ost" src="https://www.fliegerclub-traunsee.at/cams/image-ost000.jpg"/>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <div class="wx-card">
-        <h4>
-          <span>TAF</span>
-          <div class="wx-actions">
-            <button class="wx-btn" type="button" onclick="copyText('tafRaw')">Copy</button>
-            <button class="wx-btn" type="button" onclick="toggleRaw('tafRaw')">Raw</button>
-          </div>
-        </h4>
+      <div class="right-stack">
+        <div class="embed-box">
+          <div class="embed-title">METAR/TAF Widget (LOLU/LOWL)</div>
+          <a href="https://metar-taf.com/metar/LOLU?station_id=LOWL" id="metartaf-UhKGzHpO"
+             style="font-size:18px; font-weight:500; color:#000; width:350px; height:278px; display:block">
+            METAR Gmunden-Laakirchen Airfield
+          </a>
+          <script async defer crossorigin="anonymous"
+            src="https://metar-taf.com/embed-js/LOLU?u=68055&bg_color=ffffff&station_id=LOWL&layout=landscape&qnh=hPa&rh=rh&target=UhKGzHpO"></script>
+        </div>
 
-        <pre id="tafRaw" class="wx-raw">Lade TAF…</pre>
-        <div class="wx-subtle" id="wxTafNote"></div>
+        <div class="card" style="padding:12px;">
+          <h2 style="margin:0 0 10px 0;">SafeSky Live</h2>
+          <iframe
+            src="https://live.safesky.app/map?lat=47.96899&lng=13.72095&zoom=8.50"
+            width="100%" height="520"
+            style="border:0; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.10);"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            allowfullscreen>
+          </iframe>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================
+       WETTER (Detail)
+       ========================= -->
+  <section id="section-wetter" class="main-section">
+    <div class="card">
+      <h2 style="margin-top:0;">Ort suchen</h2>
+      <div class="top-controls">
+        <div class="block">
+          <label for="customPlace">Ort suchen (Standard ist Gmunden):</label>
+          <div class="searchrow">
+            <input id="customPlace" type="text" placeholder="z. B. Traunkirchen, Wien, LOWW…">
+            <button type="button" onclick="searchPlace()">Suchen</button>
+          </div>
+          <div id="placeStatus"></div>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="button-active" id="btn0" onclick="setDay(0)">Heute</button>
+        <button id="btn1" onclick="setDay(1)">Morgen</button>
+        <button id="btn2" onclick="setDay(2)">Übermorgen</button>
       </div>
     </div>
-  </div>
+
+    <div style="height:12px;"></div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Aktuelles Wetter</h2>
+      <p id="weather-current-weather">Lade Daten...</p>
+    </div>
+    <div style="height:12px;"></div>
+
+    <div style="height:12px;"></div>
+
+    <div class="card forecast">
+      <h2 style="margin-top:0;">12-Stunden-Vorhersage</h2>
+      <div class="weekly" id="weather-forecast"></div>
+    </div>
+
+    <h2>🔍 Wetterverläufe (24h)</h2>
+    <div class="chart-tabs">
+      <div class="chart-tab-button active" onclick="switchChartTab(0)">🌡️ Temperatur</div>
+      <div class="chart-tab-button" onclick="switchChartTab(1)">💨 Wind (Knoten)</div>
+      <div class="chart-tab-button" onclick="switchChartTab(2)">🌧️ Regen (mm)</div>
+      <div class="chart-tab-button" onclick="switchChartTab(3)">👁️ Sichtweite</div>
+    </div>
+
+    <div class="chart-tab-content active"><canvas height="100" id="tempChart"></canvas></div>
+    <div class="chart-tab-content"><canvas height="100" id="windChart"></canvas></div>
+    <div class="chart-tab-content"><canvas height="100" id="rainChart"></canvas></div>
+
+    <div class="card" style="margin-top:14px;">
+      <h2 style="margin-top:0;">Wochenübersicht</h2>
+      <div class="weekly" id="weekly"></div>
+    </div>
+
+    <h2>🛰️ Interaktives Wetterradar (Wind, Regen &amp; Temperatur – Windy)</h2>
+    <iframe allowfullscreen="" frameborder="0" height="500"
+      src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=wind&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true"
+      style="border:0; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%"></iframe>
+  </section>
+
+  <!-- =========================
+       WEBCAMS
+       ========================= -->
+  <section id="section-webcams" class="main-section">
+    <div class="card">
+      <h2 style="margin-top:0;">Webcams</h2>
+
+      <div class="webcams">
+        <div class="webcam">
+          <h3>Gmunden Süd-West</h3>
+          <img alt="Webcam SW" src="https://www.fliegerclub-traunsee.at/cams/image-west000M.jpg"/>
+        </div>
+        <div class="webcam">
+          <h3>Gmunden Osten</h3>
+          <img alt="Webcam Ost" src="https://www.fliegerclub-traunsee.at/cams/image-ost000.jpg"/>
+        </div>
+        <div class="webcam">
+          <h3>Schafberg (Panomax)</h3>
+          <a href="https://schafberg.panomax.com/" target="_blank" rel="noopener" style="width:100%;">
+            <img id="camSchafbergImg" alt="Schafberg Livebild" src="https://images.webcamgalore.com/20508-current-webcam-St-Gilgen.jpg"/>
+          </a>
+          <div style="color: var(--muted); font-size: 12px; margin-top: 6px; text-align:center;">
+            Öffnet die interaktive Panomax-Ansicht in neuem Tab.
+          </div>
+        </div>
+        <div class="webcam">
+          <h3>🌄 Panoramablick vom Lichtenberg</h3>
+          <a href="https://lichtenberg.panomax.com/" target="_blank" rel="noopener" style="width:100%;">
+            <img id="camLichtenbergImg" alt="Lichtenberg Livebild" src="https://images.webcamgalore.com/27390-current-webcam-Lichtenberg.jpg"/>
+          </a>
+          <div style="color: var(--muted); font-size: 12px; margin-top: 6px; text-align:center;">
+            Öffnet die interaktive Panomax-Ansicht in neuem Tab.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================
+       PILOTENTOOLS
+       ========================= -->
+  <section id="section-tools" class="main-section">
+    <div class="card">
+      <h2 style="margin-top:0;">✈️ Pilotentools</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
+        <a class="cta secondary" href="https://www.homebriefing.com/cms-acg/opencms/de/home/" target="_blank" rel="noopener">📝 Homebriefing (ACG)</a>
+        <a class="cta" href="https://onres24.com/login.php" target="_blank" rel="noopener">📅 ONRES (Login)</a>
+        <a class="cta secondary" href="https://metar-taf.com/" target="_blank" rel="noopener">📡 METAR/TAF Übersicht</a>
+        <a class="cta secondary" href="https://eaip.austrocontrol.at/" target="_blank" rel="noopener">📘 eAIP Austria</a>
+      </div>
+      <div style="color: var(--muted); font-size: 13px;">Tipp: Das große METAR/TAF-Panel unten eignet sich super für schnellen VFR/IFR-Check inkl. Warnmarkierungen.</div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h2 style="margin-top:0;">📡 METAR / TAF (Flugwetter Österreich)</h2>
+      <label for="metarSelect">Flugplatz wählen:</label>
+      <select id="metarSelect" style="margin-bottom: 10px;">
+        <option value="LOAV">LOAV – Vöslau</option>
+        <option value="LOWL">LOWL – Linz</option>
+        <option value="LOWW">LOWW – Wien</option>
+        <option value="LOWG">LOWG – Graz</option>
+        <option value="LOWK">LOWK – Klagenfurt</option>
+        <option value="LOWI">LOWI – Innsbruck</option>
+      </select>
+
+      <div id="wxPanel" class="wx-panel">
+        <div class="wx-topline">
+          <h3 class="wx-title">📡 METAR / TAF</h3>
+
+          <div class="wx-badges">
+            <span id="wxCatPill" class="wx-pill" style="display:none;">
+              <strong id="wxCatText"></strong>
+            </span>
+            <span class="wx-pill">Station: <strong id="wxStation">—</strong></span>
+            <span class="wx-pill">Stand (UTC): <strong id="wxObs">—</strong></span>
+          </div>
+        </div>
+
+        <div class="wx-grid">
+          <div id="wxMetarCard" class="wx-card">
+            <h4>
+              <span>METAR</span>
+              <div class="wx-actions">
+                <button class="wx-btn" type="button" onclick="copyText('metarRaw')">Copy</button>
+                <button class="wx-btn" type="button" onclick="toggleRaw('metarRaw')">Raw</button>
+              </div>
+            </h4>
+
+            <div class="wx-kv">
+              <div id="kvWind" class="item"><div class="label">Wind</div><div class="value" id="wxWind">—</div></div>
+              <div id="kvVis" class="item"><div class="label">Sicht</div><div class="value" id="wxVis">—</div></div>
+              <div id="kvCeil" class="item"><div class="label">Ceiling</div><div class="value" id="wxCeil">—</div></div>
+              <div id="kvQnh" class="item"><div class="label">QNH</div><div class="value" id="wxQnh">—</div></div>
+              <div id="kvTemp" class="item"><div class="label">Temp / DP</div><div class="value" id="wxTempDp">—</div></div>
+              <div id="kvWx" class="item"><div class="label">Wetter</div><div class="value" id="wxWx">—</div></div>
+            </div>
+
+            <pre id="metarRaw" class="wx-raw">Lade METAR…</pre>
+            <div id="wxHint" class="wx-subtle"></div>
+          </div>
+
+          <div class="wx-card">
+            <h4>
+              <span>TAF</span>
+              <div class="wx-actions">
+                <button class="wx-btn" type="button" onclick="copyText('tafRaw')">Copy</button>
+                <button class="wx-btn" type="button" onclick="toggleRaw('tafRaw')">Raw</button>
+              </div>
+            </h4>
+
+            <pre id="tafRaw" class="wx-raw">Lade TAF…</pre>
+            <div class="wx-subtle" id="wxTafNote"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
 <script>
+  // =========================
+  // Main Tabs
+  // =========================
+  function switchMainTab(key){
+    const map = {
+      landing: "section-landing",
+      wetter: "section-wetter",
+      webcams: "section-webcams",
+      tools: "section-tools"
+    };
+
+    document.querySelectorAll(".main-tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".main-section").forEach(s => s.classList.remove("active"));
+
+    if(key === "landing") document.getElementById("mainBtnLanding").classList.add("active");
+    if(key === "wetter")  document.getElementById("mainBtnWetter").classList.add("active");
+    if(key === "webcams") document.getElementById("mainBtnWebcams").classList.add("active");
+    if(key === "tools")   document.getElementById("mainBtnTools").classList.add("active");
+
+    const id = map[key] || map.landing;
+    const el = document.getElementById(id);
+    if(el) el.classList.add("active");
+
+    // kleine UX: bei Tabwechsel nach oben scrollen
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // =========================
+  // Chart Tabs (24h)
+  // =========================
+  function switchChartTab(index) {
+    document.querySelectorAll(".chart-tab-button").forEach((btn, i) =>
+      btn.classList.toggle("active", i === index)
+    );
+    document.querySelectorAll(".chart-tab-content").forEach((tab, i) =>
+      tab.classList.toggle("active", i === index)
+    );
+  }
+
+  // =========================
+  // Wetterlogik (aus deiner Datei übernommen; nur IDs erweitert)
+  // =========================
+
   // Default coords (Gmunden)
   const DEFAULT_COORDS = { lat: 47.918, lon: 13.799 };
 
@@ -416,19 +670,11 @@
   function setDay(dayIndex) {
     selectedDay = dayIndex;
     document.querySelectorAll(".buttons button").forEach(btn => btn.classList.remove("button-active"));
-    document.getElementById("btn" + dayIndex).classList.add("button-active");
+    const b = document.getElementById("btn" + dayIndex);
+    if(b) b.classList.add("button-active");
 
     const c = window.__customCoords || DEFAULT_COORDS;
     loadWeather(c.lat, c.lon);
-  }
-
-  function switchTab(index) {
-    document.querySelectorAll(".tab-button").forEach((btn, i) =>
-      btn.classList.toggle("active", i === index)
-    );
-    document.querySelectorAll(".tab-content").forEach((tab, i) =>
-      tab.classList.toggle("active", i === index)
-    );
   }
 
   function knots(kmh) { return +(kmh / 1.852).toFixed(1); }
@@ -438,25 +684,39 @@
     return dirs[Math.round(degree / 45) % 8];
   }
 
+  function setHtmlIfExists(id, html){
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = html;
+  }
+  function setTextIfExists(id, txt){
+    const el = document.getElementById(id);
+    if(el) el.textContent = txt;
+  }
+
   async function loadWeather(lat, lon) {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,windspeed_10m,winddirection_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&timezone=auto`;
     const res = await fetch(url);
     const data = await res.json();
 
     const current = data.current_weather;
-    document.getElementById('current-weather').innerHTML = `
+    const currentHtml = `
       🌡️ Temperatur: ${current.temperature}°C<br>
       🌬️ Wind: ${current.windspeed} km/h<br>
       🕒 Letztes Update: ${current.time.replace("T", " Uhr ")}
     `;
+    setHtmlIfExists("landing-current-weather", currentHtml);
+    setHtmlIfExists("weather-current-weather", currentHtml);
 
-    const forecast = document.getElementById("forecast");
-    forecast.innerHTML = "";
+    // 12h forecast: landing + wetter
+    const forecastIds = ["landing-forecast", "weather-forecast"];
+    forecastIds.forEach(id => {
+      const fc = document.getElementById(id);
+      if(fc) fc.innerHTML = "";
+    });
 
     const now = new Date();
     const nowISODate = now.toISOString().slice(0,10);
 
-    // finde "jetzt" im hourly-array (Datum+Stunde)
     const idx = data.hourly.time.findIndex(t => {
       const d = new Date(t);
       return d.getHours() === now.getHours() && t.slice(0,10) === nowISODate;
@@ -464,6 +724,7 @@
 
     const startIdx = idx >= 0 ? idx : 0;
 
+    let forecastHtml = "";
     for (let i = startIdx; i < startIdx + 12 && i < data.hourly.time.length; i++) {
       const temp = data.hourly.temperature_2m[i];
       const wind = data.hourly.windspeed_10m[i];
@@ -472,7 +733,7 @@
       const time = hour.toString().padStart(2, '0') + " Uhr";
       let icon = temp >= 25 ? "☀️" : temp < 0 ? "❄️" : hour < 7 || hour > 20 ? "🌙" : "⛅";
       let timeClass = hour >= 20 || hour < 6 ? "night" : hour >= 17 ? "evening" : "";
-      forecast.innerHTML += `
+      forecastHtml += `
         <div class="forecast-card ${timeClass}">
           <strong>${time}</strong><br>
           <div style="font-size:22px;">${icon}</div>
@@ -480,7 +741,9 @@
           💨 ${wind} km/h<br>🧭 ${dir}
         </div>`;
     }
+    forecastIds.forEach(id => setHtmlIfExists(id, forecastHtml));
 
+    // Charts + selected-day arrays (nur im Wetter-Tab vorhanden)
     const start = selectedDay * 24;
     const temps = [], winds = [], rains = [], labels = [];
     for (let i = start; i < start + 24 && i < data.hourly.time.length; i++) {
@@ -491,43 +754,56 @@
       rains.push(data.hourly.precipitation[i]);
     }
 
+    // Destroy charts if they exist
     if (tempChart) tempChart.destroy();
     if (windChart) windChart.destroy();
     if (rainChart) rainChart.destroy();
 
-    tempChart = new Chart(document.getElementById("tempChart"), {
-      type: "line",
-      data: { labels, datasets: [{ label: "Temperatur (°C)", data: temps, fill: true, tension: 0.3 }] }
-    });
+    const tempCanvas = document.getElementById("tempChart");
+    const windCanvas = document.getElementById("windChart");
+    const rainCanvas = document.getElementById("rainChart");
 
-    windChart = new Chart(document.getElementById("windChart"), {
-      type: "line",
-      data: { labels, datasets: [{ label: "Wind (Knoten)", data: winds, fill: true, tension: 0.3 }] }
-    });
+    if(tempCanvas){
+      tempChart = new Chart(tempCanvas, {
+        type: "line",
+        data: { labels, datasets: [{ label: "Temperatur (°C)", data: temps, fill: true, tension: 0.3 }] }
+      });
+    }
 
-    rainChart = new Chart(document.getElementById("rainChart"), {
-      type: "bar",
-      data: { labels, datasets: [{ label: "Niederschlag (mm/h)", data: rains, backgroundColor: "rgba(54, 162, 235, 0.6)" }] },
-      options: { responsive: true, scales: { y: { beginAtZero: true } } }
-    });
+    if(windCanvas){
+      windChart = new Chart(windCanvas, {
+        type: "line",
+        data: { labels, datasets: [{ label: "Wind (Knoten)", data: winds, fill: true, tension: 0.3 }] }
+      });
+    }
+
+    if(rainCanvas){
+      rainChart = new Chart(rainCanvas, {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Niederschlag (mm/h)", data: rains, backgroundColor: "rgba(54, 162, 235, 0.6)" }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    }
 
     const week = document.getElementById("weekly");
-    week.innerHTML = "";
-    for (let i = 0; i < data.daily.time.length; i++) {
-      const day = new Date(data.daily.time[i]).toLocaleDateString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit' });
-      const max = data.daily.temperature_2m_max[i];
-      const min = data.daily.temperature_2m_min[i];
-      const rise = data.daily.sunrise[i].split("T")[1];
-      const set = data.daily.sunset[i].split("T")[1];
-      const icon = max >= 25 ? "☀️" : max >= 15 ? "🌤️" : max <= 0 ? "❄️" : "⛅";
-      week.innerHTML += `
-        <div class="day-card">
-          <strong>${day}</strong><br>
-          <div style="font-size:24px;">${icon}</div>
-          🔺 <span class="${max >= 20 ? 'temp-warm' : 'temp-cool'}">${max}°C</span><br>
-          🔻 <span class="${min <= 5 ? 'temp-cool' : ''}">${min}°C</span><br>
-          🌅 ${rise}<br>🌇 ${set}
-        </div>`;
+    if(week){
+      week.innerHTML = "";
+      for (let i = 0; i < data.daily.time.length; i++) {
+        const day = new Date(data.daily.time[i]).toLocaleDateString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+        const max = data.daily.temperature_2m_max[i];
+        const min = data.daily.temperature_2m_min[i];
+        const rise = data.daily.sunrise[i].split("T")[1];
+        const set = data.daily.sunset[i].split("T")[1];
+        const icon = max >= 25 ? "☀️" : max >= 15 ? "🌤️" : max <= 0 ? "❄️" : "⛅";
+        week.innerHTML += `
+          <div class="day-card">
+            <strong>${day}</strong><br>
+            <div style="font-size:24px;">${icon}</div>
+            🔺 <span class="${max >= 20 ? 'temp-warm' : 'temp-cool'}">${max}°C</span><br>
+            🔻 <span class="${min <= 5 ? 'temp-cool' : ''}">${min}°C</span><br>
+            🌅 ${rise}<br>🌇 ${set}
+          </div>`;
+      }
     }
   }
 
@@ -536,9 +812,10 @@
     const jetzt = new Date();
     const datum = jetzt.toLocaleDateString("de-DE", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
     const zeit = jetzt.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-    document.getElementById("datetime").textContent = `${datum} – ${zeit}`;
-    document.getElementById("utcNow").textContent =
-      jetzt.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    setTextIfExists("datetime", `${datum} – ${zeit}`);
+    setTextIfExists("utcNow",
+      jetzt.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    );
   }
   zeigeDatumUhrzeit();
   setInterval(zeigeDatumUhrzeit, 1000);
@@ -553,8 +830,8 @@
     const sr = data?.daily?.sunrise?.[0];
     const ss = data?.daily?.sunset?.[0];
     const fmtHM = (iso) => iso ? iso.split("T")[1].slice(0,5) : "--:--";
-    document.getElementById("loluSunrise").textContent = fmtHM(sr);
-    document.getElementById("loluSunset").textContent  = fmtHM(ss);
+    setTextIfExists("loluSunrise", fmtHM(sr));
+    setTextIfExists("loluSunset",  fmtHM(ss));
   }
 
   // ===== Custom Ortssuche (Open-Meteo Geocoding) =====
@@ -569,26 +846,26 @@
   async function searchPlace() {
     const input = document.getElementById("customPlace");
     const status = document.getElementById("placeStatus");
-    const q = (input.value || "").trim();
+    const q = (input?.value || "").trim();
 
-    if (!q) { status.textContent = "Bitte Ort eingeben."; return; }
-    status.textContent = "Suche…";
+    if (!q) { if(status) status.textContent = "Bitte Ort eingeben."; return; }
+    if(status) status.textContent = "Suche…";
 
     try {
       const r = await geocodePlace(q);
-      if (!r) { status.textContent = "Nichts gefunden."; return; }
+      if (!r) { if(status) status.textContent = "Nichts gefunden."; return; }
 
       const label = `${r.name}${r.admin1 ? ", " + r.admin1 : ""}${r.country ? " (" + r.country + ")" : ""}`;
-      status.textContent = `Aktiv: ${label}`;
+      if(status) status.textContent = `Aktiv: ${label}`;
 
       window.__customCoords = { lat: r.latitude, lon: r.longitude };
       loadWeather(r.latitude, r.longitude);
     } catch (e) {
-      status.textContent = "Fehler bei der Suche.";
+      if(status) status.textContent = "Fehler bei der Suche.";
     }
   }
 
-  // Enter key triggers search
+  // Enter key triggers search (nur Wetter-Tab)
   document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("customPlace");
     if (input) {
@@ -610,7 +887,7 @@
   setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000);
 
   // =========================
-  // METAR/TAF via Cloudflare Worker (with alerts)
+  // METAR/TAF via Cloudflare Worker (dein Code unverändert)
   // =========================
   const WX_PROXY = "https://orange-sky-8e02.juergen-sch85.workers.dev";
 
@@ -675,6 +952,8 @@
     const txt = document.getElementById("wxCatText");
     const panel = document.getElementById("wxPanel");
 
+    if(!panel || !pill || !txt) return;
+
     panel.className = "wx-panel";
     if (!cat) { pill.style.display = "none"; return; }
 
@@ -687,11 +966,12 @@
 
   function prettyTaf(raw) {
     if (!raw) return "";
-    return raw.replace(/\s(TEMPO|BECMG|INTER|FM\d{6}|PROB\d{2}|RMK)\s/g, "\n$1 ").trim();
+    return raw.replace(/\\s(TEMPO|BECMG|INTER|FM\\d{6}|PROB\\d{2}|RMK)\\s/g, "\\n$1 ").trim();
   }
 
   function toggleRaw(id) {
     const el = document.getElementById(id);
+    if(!el) return;
     el.style.maxHeight = el.style.maxHeight ? "" : "90px";
     el.style.overflow = el.style.overflow ? "" : "hidden";
   }
@@ -747,13 +1027,16 @@
   }
 
   async function updateMetarTafNative() {
-    const icao = document.getElementById("metarSelect").value;
+    const sel = document.getElementById("metarSelect");
+    if(!sel) return;
+
+    const icao = sel.value;
     const hintEl = document.getElementById("wxHint");
     const tafNote = document.getElementById("wxTafNote");
 
-    hintEl.textContent = "";
-    tafNote.textContent = "";
-    document.getElementById("wxStation").textContent = icao;
+    if(hintEl) hintEl.textContent = "";
+    if(tafNote) tafNote.textContent = "";
+    setTextIfExists("wxStation", icao);
 
     try {
       const metarJson = await loadWx("metar", icao, "decoded");
@@ -762,54 +1045,69 @@
       const tafJson = await loadWx("taf", icao, "raw");
       const tafText = extractRaw(tafJson);
 
-      document.getElementById("metarRaw").textContent = m?.raw_text || "(kein METAR)";
-      document.getElementById("tafRaw").textContent = tafText ? prettyTaf(tafText) : "(kein TAF)";
+      setTextIfExists("metarRaw", m?.raw_text || "(kein METAR)");
+      setTextIfExists("tafRaw", tafText ? prettyTaf(tafText) : "(kein TAF)");
 
-      document.getElementById("wxObs").textContent = m?.observed ? m.observed.replace("T"," ").replace("Z","Z") : "—";
-      document.getElementById("wxStation").textContent = m?.station?.icao || icao;
+      setTextIfExists("wxObs", m?.observed ? m.observed.replace("T"," ").replace("Z","Z") : "—");
+      setTextIfExists("wxStation", m?.station?.icao || icao);
 
       const wind = fmtWindText(m);
       const vis = fmtVis(m);
       const ceil = pickCeiling(m);
 
-      document.getElementById("wxWind").textContent = wind.text;
-      document.getElementById("wxVis").textContent = vis.text;
-      document.getElementById("wxCeil").textContent = ceil.text;
-      document.getElementById("wxQnh").textContent = fmtQnh(m);
-      document.getElementById("wxTempDp").textContent = fmtTempDp(m);
-      document.getElementById("wxWx").textContent = fmtWx(m);
+      setTextIfExists("wxWind", wind.text);
+      setTextIfExists("wxVis", vis.text);
+      setTextIfExists("wxCeil", ceil.text);
+      setTextIfExists("wxQnh", fmtQnh(m));
+      setTextIfExists("wxTempDp", fmtTempDp(m));
+      setTextIfExists("wxWx", fmtWx(m));
 
       setFlightCategory(m?.flight_category);
       applyAlerts(m);
 
-      if (!m?.raw_text || !tafText) hintEl.textContent = "Hinweis: Wenn keine Reports verfügbar sind, anderen Flugplatz wählen.";
-      if (tafText) tafNote.textContent = "TAF ist umgebrochen (TEMPO/BECMG/PROB/FM …).";
+      if ((!m?.raw_text || !tafText) && hintEl) hintEl.textContent = "Hinweis: Wenn keine Reports verfügbar sind, anderen Flugplatz wählen.";
+      if (tafText && tafNote) tafNote.textContent = "TAF ist umgebrochen (TEMPO/BECMG/PROB/FM …).";
 
-      document.getElementById("metarRaw").style.maxHeight = "90px";
-      document.getElementById("metarRaw").style.overflow = "hidden";
-      document.getElementById("tafRaw").style.maxHeight = "180px";
-      document.getElementById("tafRaw").style.overflow = "hidden";
+      const mr = document.getElementById("metarRaw");
+      const tr = document.getElementById("tafRaw");
+      if(mr){ mr.style.maxHeight = "90px"; mr.style.overflow = "hidden"; }
+      if(tr){ tr.style.maxHeight = "180px"; tr.style.overflow = "hidden"; }
     } catch (e) {
       setFlightCategory(null);
       clearAlerts();
-      document.getElementById("wxObs").textContent = "—";
-      document.getElementById("wxWind").textContent = "—";
-      document.getElementById("wxVis").textContent = "—";
-      document.getElementById("wxCeil").textContent = "—";
-      document.getElementById("wxQnh").textContent = "—";
-      document.getElementById("wxTempDp").textContent = "—";
-      document.getElementById("wxWx").textContent = "—";
-      document.getElementById("metarRaw").textContent = "";
-      document.getElementById("tafRaw").textContent = "";
-      hintEl.textContent = "Fehler beim Laden: " + String(e);
+      setTextIfExists("wxObs","—");
+      setTextIfExists("wxWind","—");
+      setTextIfExists("wxVis","—");
+      setTextIfExists("wxCeil","—");
+      setTextIfExists("wxQnh","—");
+      setTextIfExists("wxTempDp","—");
+      setTextIfExists("wxWx","—");
+      setTextIfExists("metarRaw","");
+      setTextIfExists("tafRaw","");
+      if(hintEl) hintEl.textContent = "Fehler beim Laden: " + String(e);
     }
   }
 
-  document.getElementById("metarSelect").addEventListener("change", updateMetarTafNative);
+  document.getElementById("metarSelect")?.addEventListener("change", updateMetarTafNative);
   updateMetarTafNative();
   setInterval(updateMetarTafNative, 10 * 60 * 1000);
+
+  // =========================
+  // Webcam-Refresh (Panomax via WebcamGalore Snapshots)
+  // =========================
+  function refreshCamImg(id){
+    const img = document.getElementById(id);
+    if(!img) return;
+    const base = img.getAttribute("data-base") || img.src.split("?")[0];
+    img.setAttribute("data-base", base);
+    img.src = base + "?t=" + Date.now();
+  }
+  setInterval(() => {
+    refreshCamImg("camSchafbergImg");
+    refreshCamImg("camLichtenbergImg");
+  }, 60 * 1000);
+
 </script>
 
-</div>
 </body>
 </html>
