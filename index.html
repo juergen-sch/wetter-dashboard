@@ -170,7 +170,7 @@
   .chart-tab-content { display: none; }
   .chart-tab-content.active { display: block; }
 
-  /* ===== Landing Embed box ===== */
+  /* ===== Startseite Embed box ===== */
   .embed-box{
     width: 390px;
     max-width: 100%;
@@ -345,6 +345,31 @@
     .buttons button { width: 100%; margin-bottom: 10px; }
     .header .timebox{ text-align:left; }
   }
+
+.embed-box{
+  max-width:100%;
+  overflow:hidden;
+}
+.embed-box iframe,
+.embed-box a{
+  max-width:100% !important;
+}
+
+
+  /* metar-taf widget containment (keine Code-Änderung am Embed selbst) */
+  .metar-embed-wrap{
+    width: 350px;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  @media (max-width: 420px){
+    .metar-embed-wrap{
+      width: 350px;
+      transform-origin: top left;
+      transform: scale(calc((100vw - 48px) / 350));
+    }
+  }
+
 </style>
 </head>
 
@@ -366,14 +391,14 @@
 
   <!-- ===== Main Navigation ===== -->
   <div class="main-tabs" role="tablist" aria-label="Navigation">
-    <button class="main-tab-btn active" id="mainBtnLanding" type="button" onclick="switchMainTab('landing')">🏠 Landing</button>
+    <button class="main-tab-btn active" id="mainBtnLanding" type="button" onclick="switchMainTab('landing')">🏠 Startseite</button>
     <button class="main-tab-btn" id="mainBtnWetter" type="button" onclick="switchMainTab('wetter')">🌦️ Wetter</button>
     <button class="main-tab-btn" id="mainBtnWebcams" type="button" onclick="switchMainTab('webcams')">📷 Webcams</button>
     <button class="main-tab-btn" id="mainBtnTools" type="button" onclick="switchMainTab('tools')">✈️ Pilotentools</button>
   </div>
 
   <!-- =========================
-       LANDINGPAGE (Default)
+       STARTSEITE (Default)
        ========================= -->
   <section id="section-landing" class="main-section active">
     <div class="grid-landing">
@@ -413,8 +438,10 @@
       <div class="right-stack">
         <div class="embed-box">
           <div class="embed-title">METAR/TAF Widget (LOLU/LOWL)</div>
-          <a href="https://metar-taf.com/metar/LOLU?station_id=LOWL" id="metartaf-ehZrCt6W" style="font-size:18px; font-weight:500; color:#000; width:350px; height:278px; display:block">METAR Gmunden-Laakirchen Airfield</a>
-<script async defer crossorigin="anonymous" src="https://metar-taf.com/embed-js/LOLU?u=68055&station_id=LOWL&layout=landscape&qnh=hPa&rh=rh&target=ehZrCt6W"></script>
+          
+<a href="https://metar-taf.com/metar/LOLU?station_id=LOWL" id="metartaf-YNwIGHbL" style="font-size:18px; font-weight:500; color:#000; width:350px; height:278px; display:block">METAR Gmunden-Laakirchen Airfield</a>
+<script async defer crossorigin="anonymous" src="https://metar-taf.com/embed-js/LOLU?u=68055&station_id=LOWL&layout=landscape&qnh=hPa&rh=rh&target=YNwIGHbL"></script>
+
         </div>
 
         <div class="card" style="padding:12px;">
@@ -502,8 +529,7 @@
     <div class="card">
       <h2 style="margin-top:0;">Webcams</h2>
 
-      <div class="webcams">
-        <div class="webcam">
+      <div class="webcams"><div class="webcam">
           <h3>Gmunden Süd-West</h3>
           <img alt="Webcam SW" src="https://www.fliegerclub-traunsee.at/cams/image-west000M.jpg"/>
         </div>
@@ -529,7 +555,53 @@
             Öffnet die interaktive Panomax-Ansicht in neuem Tab.
           </div>
         </div>
-      </div>
+
+        <div class="webcam">
+          <h3>LOLS Suben – Richtung 32 (Blick Abflugpunkt 14)</h3>
+          <a href="https://www.lols.at/webcam/" target="_blank" rel="noopener" style="width:100%;">
+            <img id="camLOLS32" alt="LOLS Richtung 32" src="https://www.lols.at/wp-content/uploads/2026/02/flugfeld1.jpg"/>
+          </a>
+        </div>
+
+        <div class="webcam">
+          <h3>LOLS Suben – Richtung 14 (Blick Abflugpunkt 32)</h3>
+          <a href="https://www.lols.at/webcam/" target="_blank" rel="noopener" style="width:100%;">
+            <img id="camLOLS14" alt="LOLS Richtung 14" src="https://www.lols.at/wp-content/uploads/2026/02/flugfeld2.jpg"/>
+          </a>
+        </div>
+
+        <div class="webcam">
+          <h3>Scharnstein (Almtal.Net)</h3>
+          <a href="https://www.almtal.net/webcam/" target="_blank" rel="noopener" style="width:100%;">
+            <img id="camScharnstein" alt="Webcam Scharnstein" src="https://www.almtal.net/cam_images/current.jpg"/>
+          </a>
+        </div>
+
+        <div class="webcam">
+          <h3>LOLW Wels – Live (Apron)</h3>
+          <a href="https://www.wmw.at/webcam-platzwetter/" target="_blank" rel="noopener" style="width:100%;">
+            <img id="camLOLW" alt="LOLW Wels Webcam" src="https://www.wmw.at/webcam/caming.jpg"/>
+          </a>
+          <div style="color: var(--muted); font-size: 12px; margin-top: 6px; text-align:center;">
+            Falls dein Browser das Bild nicht lädt: Link öffnet die Webcam-Seite in neuem Tab.
+          </div>
+        </div>
+
+
+        <div class="webcam">
+          <h3>Grünberg Gmunden</h3>
+          <a href="https://www.gruenberg.info/de/aktuelles/webcam-gruenberg" target="_blank" rel="noopener" style="width:100%;">
+            <img id="camGruenberg" alt="Webcam Grünberg" src="https://www.gruenberg.info/fileadmin/_processed_/csm_webcam-gruenberg_01.jpg"/>
+          </a>
+        </div>
+
+        <div class="webcam">
+          <h3>Traunstein (Foto-Webcam)</h3>
+          <a href="https://www.foto-webcam.eu/webcam/traunstein/" target="_blank" rel="noopener" style="width:100%;">
+            <img id="camTraunsteinFoto" alt="Traunstein Foto-Webcam" src="https://www.foto-webcam.eu/webcam/traunstein/current.jpg"/>
+          </a>
+        </div>
+</div>
     </div>
   </section>
 
@@ -1101,6 +1173,12 @@
   setInterval(() => {
     refreshCamImg("camSchafbergImg");
     refreshCamImg("camLichtenbergImg");
+    refreshCamImg("camLOLS32");
+    refreshCamImg("camLOLS14");
+    refreshCamImg("camScharnstein");
+    refreshCamImg("camLOLW");
+    refreshCamImg("camGruenberg");
+    refreshCamImg("camTraunsteinFoto");
   }, 60 * 1000);
 
 </script>
