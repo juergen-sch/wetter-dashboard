@@ -187,7 +187,14 @@
 <div class="container">
   <div style="display: flex; justify-content: space-between; align-items: center;">
     <h1 style="text-align: center; flex: 1; margin: 0;">Weather-Dashboard</h1>
-    <div id="datetime" style="text-align: right; font-size: 1rem; color: #555;"></div>
+    <div style="text-align:right; color:#555; line-height:1.25;">
+  <div id="datetime" style="font-size: 1rem;"></div>
+  <div style="font-size:0.92rem; opacity:.92;">
+    UTC: <strong id="utcNow">--:--:--</strong> ·
+    LOLU SR: <strong id="loluSunrise">--:--</strong> ·
+    SS: <strong id="loluSunset">--:--</strong>
+  </div>
+</div>
   </div>
 
   <label for="location">Ort wählen:</label>
@@ -469,9 +476,31 @@
       const datum = jetzt.toLocaleDateString("de-DE", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
       const zeit = jetzt.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
       document.getElementById("datetime").textContent = `${datum} – ${zeit}`;
+      document.getElementById("utcNow").textContent =
+       jetzt.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
     }
     zeigeDatumUhrzeit();
     setInterval(zeigeDatumUhrzeit, 1000);
+    loadLoluSunTimes();
+setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000); // alle 6 Stunden reicht locker
+
+    async function loadLoluSunTimes() {
+  // LOLU ~ Gmunden (deine Koordinaten)
+  const lat = 47.918;
+  const lon = 13.799;
+
+  // sunrise/sunset für heute (Timezone = auto -> lokale Zeit vor Ort)
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset&timezone=auto`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  const sr = data?.daily?.sunrise?.[0]; // z.B. "2026-02-25T07:01"
+  const ss = data?.daily?.sunset?.[0];
+
+  const fmtHM = (iso) => iso ? iso.split("T")[1].slice(0,5) : "--:--";
+
+  document.getElementById("loluSunrise").textContent = fmtHM(sr);
+  document.getElementById("loluSunset").textContent  = fmtHM(ss);
 
     // Start
     loadWeather(locations["Gmunden"].lat, locations["Gmunden"].lon);
