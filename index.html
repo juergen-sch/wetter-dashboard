@@ -187,14 +187,16 @@
 <div class="container">
   <div style="display: flex; justify-content: space-between; align-items: center;">
     <h1 style="text-align: center; flex: 1; margin: 0;">Weather-Dashboard</h1>
+
+    <!-- Header rechts: Lokal + UTC + LOLU Sunrise/Sunset -->
     <div style="text-align:right; color:#555; line-height:1.25;">
-  <div id="datetime" style="font-size: 1rem;"></div>
-  <div style="font-size:0.92rem; opacity:.92;">
-    UTC: <strong id="utcNow">--:--:--</strong> ·
-    LOLU SR: <strong id="loluSunrise">--:--</strong> ·
-    SS: <strong id="loluSunset">--:--</strong>
-  </div>
-</div>
+      <div id="datetime" style="font-size: 1rem;"></div>
+      <div style="font-size:0.92rem; opacity:.92;">
+        UTC: <strong id="utcNow">--:--:--</strong> ·
+        LOLU SR: <strong id="loluSunrise">--:--</strong> ·
+        SS: <strong id="loluSunset">--:--</strong>
+      </div>
+    </div>
   </div>
 
   <label for="location">Ort wählen:</label>
@@ -275,9 +277,9 @@
   <h2>✈️ Pilotentools</h2>
   <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
     <a href="https://www.homebriefing.com/cms-acg/opencms/de/home/" style="text-decoration: none;" target="_blank">📝 Homebriefing (ACG)</a>
+    <a href="https://onres24.com/login.php" style="text-decoration: none;" target="_blank">📅 onres24 (Login)</a>
     <a href="https://metar-taf.com/" target="_blank">📡 METAR/TAF Übersicht</a>
     <a href="https://eaip.austrocontrol.at/" style="text-decoration: none;" target="_blank">📘 eAIP Austria</a>
-    <a href="https://onres24.com/login.php" style="text-decoration: none;" target="_blank">📅 onres24 (Login)</a>
   </div>
 
   <h2>📡 METAR / TAF (Flugwetter Österreich)</h2>
@@ -470,44 +472,47 @@
       }
     }
 
-    // Datum + Uhrzeit live
+    // Header: Datum/Uhrzeit lokal + UTC
     function zeigeDatumUhrzeit() {
       const jetzt = new Date();
       const datum = jetzt.toLocaleDateString("de-DE", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
       const zeit = jetzt.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
       document.getElementById("datetime").textContent = `${datum} – ${zeit}`;
+
+      // UTC time now (Zulu)
       document.getElementById("utcNow").textContent =
-       jetzt.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        jetzt.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
     }
     zeigeDatumUhrzeit();
     setInterval(zeigeDatumUhrzeit, 1000);
-    loadLoluSunTimes();
-setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000); // alle 6 Stunden reicht locker
 
+    // LOLU sunrise/sunset (based on Gmunden/LOLU coords)
     async function loadLoluSunTimes() {
-  // LOLU ~ Gmunden (deine Koordinaten)
-  const lat = 47.918;
-  const lon = 13.799;
+      const lat = 47.918;
+      const lon = 13.799;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset&timezone=auto`;
+      const res = await fetch(url);
+      const data = await res.json();
 
-  // sunrise/sunset für heute (Timezone = auto -> lokale Zeit vor Ort)
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset&timezone=auto`;
-  const res = await fetch(url);
-  const data = await res.json();
+      const sr = data?.daily?.sunrise?.[0]; // "YYYY-MM-DDTHH:MM"
+      const ss = data?.daily?.sunset?.[0];
 
-  const sr = data?.daily?.sunrise?.[0]; // z.B. "2026-02-25T07:01"
-  const ss = data?.daily?.sunset?.[0];
+      const fmtHM = (iso) => iso ? iso.split("T")[1].slice(0,5) : "--:--";
 
-  const fmtHM = (iso) => iso ? iso.split("T")[1].slice(0,5) : "--:--";
+      document.getElementById("loluSunrise").textContent = fmtHM(sr);
+      document.getElementById("loluSunset").textContent  = fmtHM(ss);
+    }
 
-  document.getElementById("loluSunrise").textContent = fmtHM(sr);
-  document.getElementById("loluSunset").textContent  = fmtHM(ss);
-
-    // Start
+    // Start (Open-Meteo)
     loadWeather(locations["Gmunden"].lat, locations["Gmunden"].lon);
     setInterval(() => {
       const loc = locations[document.getElementById("location").value];
       if (loc) loadWeather(loc.lat, loc.lon);
     }, 10 * 60 * 1000);
+
+    // Start (Sun times) + occasional refresh
+    loadLoluSunTimes();
+    setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000);
 
     // =========================
     // METAR/TAF via Cloudflare Worker (with alerts)
@@ -547,7 +552,6 @@ setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000); // alle 6 Stunden reicht lock
       if (!v) return { text: "—", meters: null };
       const meters = (typeof v.meters === "number") ? v.meters : null;
       if (meters && meters !== 9999) return { text: `${meters} m`, meters };
-      // if only miles/text:
       return { text: v.text || "—", meters };
     }
 
@@ -577,7 +581,6 @@ setInterval(loadLoluSunTimes, 6 * 60 * 60 * 1000); // alle 6 Stunden reicht lock
       const panel = document.getElementById("wxPanel");
       const metarCard = document.getElementById("wxMetarCard");
 
-      // reset classes
       panel.className = "wx-panel";
       metarCard.className = "wx-card";
 
