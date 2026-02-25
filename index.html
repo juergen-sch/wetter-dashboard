@@ -591,18 +591,21 @@
         <div class="webcam">
           <h3>Grünberg Gmunden</h3>
           <a href="https://www.gruenberg.info/de/aktuelles/webcam-gruenberg" target="_blank" rel="noopener" style="width:100%;">
-            <img id="camGruenberg" alt="Webcam Grünberg" src="https://www.gruenberg.info/fileadmin/_processed_/csm_webcam-gruenberg_01.jpg"/>
+            <img id="camGruenberg"
+                 alt="Grünberg Gmunden Webcam"
+                 src="https://wtvthmb.feratel.com/thumbnails/5134.jpeg?t=38&dcsdesign=WTP_partner&design=v5"/>
           </a>
         </div>
-
+    
         <div class="webcam">
           <h3>Traunstein (Foto-Webcam)</h3>
           <a href="https://www.foto-webcam.eu/webcam/traunstein/" target="_blank" rel="noopener" style="width:100%;">
-            <img id="camTraunsteinFoto" alt="Traunstein Foto-Webcam" src="https://www.foto-webcam.eu/webcam/traunstein/current.jpg"/>
+            <img id="camTraunsteinFoto"
+                 alt="Traunstein Foto-Webcam"
+                 src="https://www.foto-webcam.eu/webcam/traunstein/current/720.jpg"/>
           </a>
         </div>
 </div>
-    </div>
   </section>
 
   <!-- =========================
@@ -1168,7 +1171,8 @@
     if(!img) return;
     const base = img.getAttribute("data-base") || img.src.split("?")[0];
     img.setAttribute("data-base", base);
-    img.src = base + "?t=" + Date.now();
+    const sep = base.includes("?") ? "&t=" : "?t=";
+    img.src = base + sep + Date.now();
   }
   setInterval(() => {
     refreshCamImg("camSchafbergImg");
@@ -1177,8 +1181,8 @@
     refreshCamImg("camLOLS14");
     refreshCamImg("camScharnstein");
     refreshCamImg("camLOLW");
-    refreshCamImg("camGruenberg");
     refreshCamImg("camTraunsteinFoto");
+    refreshCamImg("camGruenberg");
   }, 60 * 1000);
 
 </script>
