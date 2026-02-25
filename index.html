@@ -1,137 +1,448 @@
 <!DOCTYPE html>
+
 <html lang="de">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Weather-Dashboard</title>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
-body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 0; }
-.container { width: 95%; max-width: 1300px; margin: 20px auto; background: #fff; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-h1, h2 { color: #333; margin-top: 1em; }
-select, button { padding: 6px 12px; font-size: 16px; margin: 10px 5px 20px 0; }
+    body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 0; }
+    .container { width: 95%; max-width: 1300px; margin: 20px auto; background: #fff; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1, h2 { color: #333; margin-top: 1em; }
+    select, button { padding: 6px 12px; font-size: 16px; margin: 10px 5px 20px 0; }
 
-pre {
-  background: #f7f7f7;
-  padding: 10px;
-  border-radius: 6px;
-  white-space: pre-wrap;
-  font-size: 14px;
+    .forecast, .weekly { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
+    .forecast-card, .day-card {
+      flex: 0 0 auto; background: #f8f8f8; padding: 10px; border-radius: 8px;
+      text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1); width: 120px;
+    }
+    .forecast-card.night { background-color: #dde3ea; }
+    .forecast-card.evening { background-color: #f0e0d0; }
+    .temp-warm { color: darkred; font-weight: bold; }
+    .temp-cool { color: steelblue; font-weight: bold; }
+    .buttons button.button-active { background: #007BFF; color: white; }
+
+    canvas { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+    .tabs { display: flex; margin-bottom: 10px; }
+    .tab-button {
+      padding: 10px 20px; background: #eee; cursor: pointer; margin-right: 5px;
+      border-radius: 5px 5px 0 0;
+    }
+    .tab-button.active { background: #007BFF; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .webcams {
+      display: flex; flex-wrap: wrap; gap: 20px; margin-top: 30px; justify-content: space-between;
+    }
+    .webcam { flex: 1 1 48%; display: flex; flex-direction: column; align-items: center; }
+    .webcam img, .webcam iframe, .webcam video {
+      width: 100%; height: 400px; object-fit: cover;
+      border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    /* --- METAR/TAF native block (minimal styling, Layout machen wir danach) --- */
+    .wx-box {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fafafa;
+      margin-bottom: 20px;
+    }
+    .wx-summary {
+      font-weight: bold;
+      margin: 8px 0 10px;
+    }
+    .wx-pre {
+      background: #fff;
+      border: 1px solid #e2e2e2;
+      border-radius: 8px;
+      padding: 10px;
+      white-space: pre-wrap;
+      margin: 10px 0 0;
+    }
+    .wx-hint {
+      font-size: 0.95rem;
+      color: #555;
+      margin-top: 8px;
+    }
+
+@media (max-width: 768px) {
+  .webcams {
+    flex-direction: column;
+  }
+  .webcam {
+    flex: 1 1 100%;
+  }
+  .forecast-card, .day-card {
+    width: 100px;
+  }
+  canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+  .tabs {
+    flex-wrap: wrap;
+  }
+  .tab-button {
+    flex: 1 1 100%;
+    margin-bottom: 5px;
+  }
+  .buttons button {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  select {
+    width: 100%;
+    margin-bottom: 15px;
+  }
 }
-
-.buttons button.button-active { background: #007BFF; color: white; }
 </style>
 </head>
-
 <body>
 <div class="container">
-
-<div style="display:flex; justify-content:space-between; align-items:center;">
-  <h1 style="margin:0;">Weather-Dashboard</h1>
-  <div id="datetime"></div>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<h1 style="text-align: center; flex: 1; margin: 0;">Weather-Dashboard</h1>
+<div id="datetime" style="text-align: right; font-size: 1rem; color: #555;"></div>
 </div>
 
-<label>Ort wählen:</label>
+<label for="location">Ort wählen:</label>
 <select id="location">
-  <option value="Gmunden">Gmunden</option>
-  <option value="Linz">Linz</option>
-  <option value="Wels">Wels</option>
-  <option value="Salzburg">Salzburg</option>
-  <option value="Zell">Zell am See</option>
-  <option value="Regau">Regau</option>
+<option value="Gmunden">Gmunden</option>
+<option value="Linz">Linz</option>
+<option value="Wels">Wels</option>
+<option value="Salzburg">Salzburg</option>
+<option value="Zell">Zell am See</option>
+<option value="Regau">Regau</option>
 </select>
 
-<h2>✈️ METAR / TAF (Flugwetter)</h2>
+<div class="buttons">
+<button class="button-active" id="btn0" onclick="setDay(0)">Heute</button>
+<button id="btn1" onclick="setDay(1)">Morgen</button>
+<button id="btn2" onclick="setDay(2)">Übermorgen</button>
+</div>
 
-<label>Flugplatz wählen:</label>
-<select id="metarSelect">
+<div class="weather">
+<h2>Aktuelles Wetter</h2>
+<p id="current-weather">Lade Daten...</p>
+</div>
+
+<div class="forecast">
+<h2>12-Stunden-Vorhersage</h2>
+<div class="weekly" id="forecast"></div>
+</div>
+
+<h2>🔍 Wetterverläufe (24h)</h2>
+<div class="tabs">
+<div class="tab-button active" onclick="switchTab(0)">🌡️ Temperatur</div>
+<div class="tab-button" onclick="switchTab(1)">💨 Wind (Knoten)</div>
+<div class="tab-button" onclick="switchTab(2)">🌧️ Regen (mm)</div>
+<div class="tab-button" onclick="switchTab(3)">👁️ Sichtweite</div>
+</div>
+
+<div class="tab-content active"><canvas height="100" id="tempChart"></canvas></div>
+<div class="tab-content"><canvas height="100" id="windChart"></canvas></div>
+<div class="tab-content"><canvas height="100" id="rainChart"></canvas></div>
+
+<div class="daily">
+<h2>Wochenübersicht</h2>
+<div class="weekly" id="weekly"></div>
+</div>
+
+<div class="tab-content">
+<iframe allowfullscreen="" frameborder="0" height="500" src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=visibility&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true" style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%">
+</iframe>
+</div>
+
+<h2>🛰️ Interaktives Wetterradar (Wind, Regen &amp; Temperatur – Windy)</h2>
+<iframe allowfullscreen="" frameborder="0" height="500" src="https://embed.windy.com/embed2.html?lat=47.95193816341858&amp;lon=13.865803101922268&amp;detailLat=47.95193816341858&amp;detailLon=13.865803101922268&amp;width=100%&amp;height=500&amp;zoom=10&amp;level=surface&amp;overlay=wind&amp;menu=true&amp;message=true&amp;marker=true&amp;calendar=now&amp;pressure=true&amp;type=map&amp;location=coordinates&amp;detail=true" style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" width="100%">
+</iframe>
+
+<div class="webcams">
+<div class="webcam">
+<h2>Gmunden Süd-West</h2>
+<img alt="Webcam SW" src="https://www.fliegerclub-traunsee.at/cams/image-west000M.jpg"/>
+</div>
+<div class="webcam">
+<h2>Gmunden Osten</h2>
+<img alt="Webcam Ost" src="https://www.fliegerclub-traunsee.at/cams/image-ost000.jpg"/>
+</div>
+<div class="webcam">
+<h2>Schafberg (Panomax)</h2>
+<iframe allowfullscreen="" frameborder="0" src="https://schafberg.panomax.com/"></iframe>
+</div>
+<div class="webcam">
+<h2>🌄 Panoramablick vom Lichtenberg</h2>
+<iframe allowfullscreen="" frameborder="0" height="600" src="https://lichtenberg.panomax.com/" width="100%"></iframe>
+</div>
+</div>
+
+<h2>✈️ Pilotentools</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
+<a href="https://www.homebriefing.com/cms-acg/opencms/de/home/" style="text-decoration: none;" target="_blank">📝 Homebriefing (ACG)</a>
+<a href="https://metar-taf.com/" target="_blank">📡 METAR/TAF Übersicht</a>
+<a href="https://eaip.austrocontrol.at/" style="text-decoration: none;" target="_blank">📘 eAIP Austria</a>
+</div>
+
+<!-- ✅ Replaced iframe embed with native METAR/TAF via your Cloudflare Worker -->
+<h2>📡 METAR / TAF (Flugwetter Österreich)</h2>
+<label for="metarSelect">Flugplatz wählen:</label>
+<select id="metarSelect" style="margin-bottom: 10px;">
   <option value="LOLU">LOLU – Gmunden</option>
   <option value="LOLS">LOLS – Schärding</option>
   <option value="LOLW">LOLW – Wels</option>
+  <option value="LOAV">LOAV – Vöslau</option>
   <option value="LOWL">LOWL – Linz</option>
   <option value="LOWW">LOWW – Wien</option>
   <option value="LOWG">LOWG – Graz</option>
+  <option value="LOWK">LOWK – Klagenfurt</option>
   <option value="LOWI">LOWI – Innsbruck</option>
 </select>
 
-<div id="metarSummary" style="margin:10px 0; font-weight:bold;">
-  Lade METAR…
-</div>
-
-<pre id="metarRaw">Lade METAR…</pre>
-<pre id="tafRaw">Lade TAF…</pre>
-
+<div class="wx-box">
+  <div id="metarSummary" class="wx-summary">Lade METAR/TAF…</div>
+  <pre id="metarRaw" class="wx-pre">Lade METAR…</pre>
+  <pre id="tafRaw" class="wx-pre">Lade TAF…</pre>
+  <div id="wxHint" class="wx-hint"></div>
 </div>
 
 <script>
-/* ===============================
-   METAR / TAF via Cloudflare
-================================ */
+  // =========================
+  // Original code starts here
+  // =========================
 
-const WX_PROXY = "https://orange-sky-8e02.juergen-sch85.workers.dev";
+  const locations = {
+    Gmunden: { lat: 47.918, lon: 13.799 },
+    Linz: { lat: 48.3064, lon: 14.2861 },
+    Wels: { lat: 48.1667, lon: 14.0333 },
+    Salzburg: { lat: 47.8095, lon: 13.0550 },
+    Zell: { lat: 47.3249, lon: 12.7943 },
+    Regau: { lat: 47.9833, lon: 13.7167 }
+  };
 
-async function loadWx(type, icao, mode) {
-  const r = await fetch(`${WX_PROXY}?type=${type}&icao=${icao}&mode=${mode}`);
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-}
+  let selectedDay = 0;
+  let tempChart, windChart, rainChart;
 
-function extractRaw(json) {
-  const d0 = json?.data?.[0];
-  if (!d0) return "";
-  if (typeof d0 === "string") return d0;   // TAF
-  return d0.raw_text || "";                // METAR
-}
-
-async function updateMetarTaf() {
-  const icao = document.getElementById("metarSelect").value;
-
-  try {
-    const metarJson = await loadWx("metar", icao, "decoded");
-    const m = metarJson?.data?.[0];
-
-    const tafJson = await loadWx("taf", icao, "raw");
-
-    document.getElementById("metarRaw").textContent =
-      m?.raw_text || "(kein METAR)";
-
-    document.getElementById("tafRaw").textContent =
-      extractRaw(tafJson) || "(kein TAF)";
-
-    const summary = [
-      m?.wind ? `Wind ${m.wind.direction || "VRB"} ${m.wind.speed?.kts || ""}kt` : null,
-      m?.visibility?.text ? `Sicht ${m.visibility.text}` : null,
-      m?.pressure?.hg ? `QNH ${Math.round(m.pressure.hg * 33.8639)} hPa` : null
-    ].filter(Boolean).join(" • ");
-
-    document.getElementById("metarSummary").textContent = summary || "—";
-
-  } catch (e) {
-    document.getElementById("metarSummary").textContent = "Fehler beim Laden";
-    document.getElementById("metarRaw").textContent = "";
-    document.getElementById("tafRaw").textContent = e.toString();
+  function setDay(dayIndex) {
+    selectedDay = dayIndex;
+    document.querySelectorAll(".buttons button").forEach(btn => btn.classList.remove("button-active"));
+    document.getElementById("btn" + dayIndex).classList.add("button-active");
+    const loc = locations[document.getElementById("location").value];
+    loadWeather(loc.lat, loc.lon);
   }
-}
 
-document.getElementById("metarSelect").addEventListener("change", updateMetarTaf);
-updateMetarTaf();
+  function switchTab(index) {
+    document.querySelectorAll(".tab-button").forEach((btn, i) =>
+      btn.classList.toggle("active", i === index)
+    );
+    document.querySelectorAll(".tab-content").forEach((tab, i) =>
+      tab.classList.toggle("active", i === index)
+    );
+  }
 
-/* ===============================
-   Datum & Uhrzeit
-================================ */
+  document.getElementById("location").addEventListener("change", () => {
+    const loc = locations[document.getElementById("location").value];
+    loadWeather(loc.lat, loc.lon);
+  });
 
-function updateClock() {
-  const now = new Date();
-  document.getElementById("datetime").textContent =
-    now.toLocaleDateString("de-DE", { weekday:"long", year:"numeric", month:"long", day:"numeric" })
-    + " – " +
-    now.toLocaleTimeString("de-DE");
-}
-updateClock();
-setInterval(updateClock, 1000);
+  function knots(kmh) {
+    return +(kmh / 1.852).toFixed(1);
+  }
+
+  function windDirectionToText(degree) {
+    const dirs = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+    return dirs[Math.round(degree / 45) % 8];
+  }
+
+  async function loadWeather(lat, lon) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,windspeed_10m,winddirection_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&timezone=auto`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const current = data.current_weather;
+    document.getElementById('current-weather').innerHTML = `
+      🌡️ Temperatur: ${current.temperature}°C<br>
+      🌬️ Wind: ${current.windspeed} km/h<br>
+      🕒 Letztes Update: ${current.time.replace("T", " Uhr ")}
+    `;
+
+    const forecast = document.getElementById("forecast");
+    forecast.innerHTML = "";
+    const nowHour = new Date().getHours();
+    const index = data.hourly.time.findIndex(t => new Date(t).getHours() === nowHour);
+    for (let i = index; i < index + 12; i++) {
+      const temp = data.hourly.temperature_2m[i];
+      const wind = data.hourly.windspeed_10m[i];
+      const dir = windDirectionToText(data.hourly.winddirection_10m[i]);
+      const hour = new Date(data.hourly.time[i]).getHours();
+      const time = hour.toString().padStart(2, '0') + " Uhr";
+      let icon = temp >= 25 ? "☀️" : temp < 0 ? "❄️" : hour < 7 || hour > 20 ? "🌙" : "⛅";
+      let timeClass = hour >= 20 || hour < 6 ? "night" : hour >= 17 ? "evening" : "";
+      forecast.innerHTML += `
+        <div class="forecast-card ${timeClass}">
+          <strong>${time}</strong><br>
+          <div style="font-size:22px;">${icon}</div>
+          <div class="${temp >= 20 ? "temp-warm" : "temp-cool"}">${temp}°C</div>
+          💨 ${wind} km/h<br>🧭 ${dir}
+        </div>`;
+    }
+
+    const start = selectedDay * 24;
+    const temps = [], winds = [], rains = [], labels = [];
+    for (let i = start; i < start + 24; i++) {
+      const hour = new Date(data.hourly.time[i]).getHours().toString().padStart(2, '0') + ":00";
+      labels.push(hour);
+      temps.push(data.hourly.temperature_2m[i]);
+      winds.push(knots(data.hourly.windspeed_10m[i]));
+      rains.push(data.hourly.precipitation[i]);
+    }
+
+    if (tempChart) tempChart.destroy();
+    if (windChart) windChart.destroy();
+    if (rainChart) rainChart.destroy();
+
+    tempChart = new Chart(document.getElementById("tempChart"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{ label: "Temperatur (°C)", data: temps, fill: true, tension: 0.3 }]
+      }
+    });
+
+    windChart = new Chart(document.getElementById("windChart"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{ label: "Wind (Knoten)", data: winds, fill: true, tension: 0.3 }]
+      }
+    });
+
+    rainChart = new Chart(document.getElementById("rainChart"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "Niederschlag (mm/h)",
+          data: rains,
+          backgroundColor: "rgba(54, 162, 235, 0.6)"
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    const week = document.getElementById("weekly");
+    week.innerHTML = "";
+    for (let i = 0; i < data.daily.time.length; i++) {
+      const day = new Date(data.daily.time[i]).toLocaleDateString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+      const max = data.daily.temperature_2m_max[i];
+      const min = data.daily.temperature_2m_min[i];
+      const rise = data.daily.sunrise[i].split("T")[1];
+      const set = data.daily.sunset[i].split("T")[1];
+      const icon = max >= 25 ? "☀️" : max >= 15 ? "🌤️" : max <= 0 ? "❄️" : "⛅";
+      week.innerHTML += `
+        <div class="day-card">
+          <strong>${day}</strong><br>
+          <div style="font-size:24px;">${icon}</div>
+          🔺 <span class="${max >= 20 ? 'temp-warm' : 'temp-cool'}">${max}°C</span><br>
+          🔻 <span class="${min <= 5 ? 'temp-cool' : ''}">${min}°C</span><br>
+          🌅 ${rise}<br>🌇 ${set}
+        </div>`;
+    }
+  }
+
+  // Datum + Uhrzeit live
+  function zeigeDatumUhrzeit() {
+    const jetzt = new Date();
+    const datum = jetzt.toLocaleDateString("de-DE", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric"
+    });
+    const zeit = jetzt.toLocaleTimeString("de-DE", {
+      hour: "2-digit", minute: "2-digit", second: "2-digit"
+    });
+    document.getElementById("datetime").textContent = `${datum} – ${zeit}`;
+  }
+
+  zeigeDatumUhrzeit();
+  setInterval(zeigeDatumUhrzeit, 1000);
+
+  // Start
+  loadWeather(locations["Gmunden"].lat, locations["Gmunden"].lon);
+  setInterval(() => {
+    const loc = locations[document.getElementById("location").value];
+    if (loc) loadWeather(loc.lat, loc.lon);
+  }, 10 * 60 * 1000);
+
+  // =========================
+  // NEW: Native METAR/TAF via your Worker
+  // =========================
+  const WX_PROXY = "https://orange-sky-8e02.juergen-sch85.workers.dev";
+
+  async function loadWx(type, icao, mode) {
+    const r = await fetch(`${WX_PROXY}?type=${encodeURIComponent(type)}&icao=${encodeURIComponent(icao)}&mode=${encodeURIComponent(mode)}`);
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  function extractRaw(json) {
+    const d0 = json?.data?.[0];
+    if (!d0) return "";
+    if (typeof d0 === "string") return d0;   // TAF raw is string
+    return d0.raw_text || "";                // METAR raw in decoded object
+  }
+
+  function makeMetarSummary(m) {
+    const parts = [];
+    if (m?.wind) parts.push(`Wind ${m.wind.direction || "VRB"} ${m.wind.speed?.kts ?? ""}kt`.trim());
+    if (m?.visibility?.text) parts.push(`Sicht ${m.visibility.text}`);
+    if (m?.pressure?.hg) parts.push(`QNH ${Math.round(m.pressure.hg * 33.8639)} hPa`);
+    return parts.join(" • ");
+  }
+
+  async function updateMetarTafNative() {
+    const icao = document.getElementById("metarSelect").value;
+    const hintEl = document.getElementById("wxHint");
+
+    hintEl.textContent = "";
+
+    try {
+      const metarJson = await loadWx("metar", icao, "decoded");
+      const m = metarJson?.data?.[0];
+
+      const tafJson = await loadWx("taf", icao, "raw");
+      const tafText = extractRaw(tafJson);
+
+      const metarText = m?.raw_text || "";
+      const summary = makeMetarSummary(m);
+
+      document.getElementById("metarSummary").textContent = summary || "—";
+      document.getElementById("metarRaw").textContent = metarText || "(kein METAR)";
+      document.getElementById("tafRaw").textContent = tafText || "(kein TAF)";
+
+      // Hinweis für nicht-reporting Plätze wie LOLU
+      if (!metarText || !tafText) {
+        hintEl.textContent =
+          "Hinweis: Manche Plätze (z. B. LOLU) liefern in METAR/TAF-Datenbanken oft keine Reports. Dann z. B. LOWL/LOWW auswählen.";
+      }
+
+    } catch (e) {
+      document.getElementById("metarSummary").textContent = "Fehler beim Laden";
+      document.getElementById("metarRaw").textContent = "";
+      document.getElementById("tafRaw").textContent = "";
+      hintEl.textContent = String(e);
+    }
+  }
+
+  document.getElementById("metarSelect").addEventListener("change", updateMetarTafNative);
+
+  // initial load
+  updateMetarTafNative();
 </script>
 
+</div>
 </body>
 </html>
