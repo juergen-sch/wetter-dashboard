@@ -511,6 +511,7 @@
     <div class="chart-tab-content active"><canvas height="100" id="tempChart"></canvas></div>
     <div class="chart-tab-content"><canvas height="100" id="windChart"></canvas></div>
     <div class="chart-tab-content"><canvas height="100" id="rainChart"></canvas></div>
+    <div class="chart-tab-content"><canvas height="100" id="visChart"></canvas></div>
 
     <div class="card" style="margin-top:14px;">
       <h2 style="margin-top:0;">Wochenübersicht</h2>
@@ -814,7 +815,7 @@
   const DEFAULT_COORDS = { lat: 47.918, lon: 13.799 };
 
   let selectedDay = 0;
-  let tempChart, windChart, rainChart;
+  let tempChart, windChart, rainChart, visChart;
 
   function setDay(dayIndex) {
     selectedDay = dayIndex;
@@ -843,7 +844,7 @@
   }
 
   async function loadWeather(lat, lon) {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,windspeed_10m,winddirection_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&timezone=auto`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,windspeed_10m,winddirection_10m,precipitation,visibility&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&timezone=auto`;
     const res = await fetch(url);
     const data = await res.json();
 
@@ -894,23 +895,27 @@
 
     // Charts + selected-day arrays (nur im Wetter-Tab vorhanden)
     const start = selectedDay * 24;
-    const temps = [], winds = [], rains = [], labels = [];
+    const temps = [], winds = [], rains = [], vis = [], labels = [];
     for (let i = start; i < start + 24 && i < data.hourly.time.length; i++) {
       const hour = new Date(data.hourly.time[i]).getHours().toString().padStart(2, '0') + ":00";
       labels.push(hour);
       temps.push(data.hourly.temperature_2m[i]);
       winds.push(knots(data.hourly.windspeed_10m[i]));
       rains.push(data.hourly.precipitation[i]);
+      const v_m = data.hourly.visibility ? data.hourly.visibility[i] : null;
+      vis.push(v_m == null ? null : +(v_m/1000).toFixed(1));
     }
 
     // Destroy charts if they exist
     if (tempChart) tempChart.destroy();
     if (windChart) windChart.destroy();
     if (rainChart) rainChart.destroy();
+    if (visChart) visChart.destroy();
 
     const tempCanvas = document.getElementById("tempChart");
     const windCanvas = document.getElementById("windChart");
     const rainCanvas = document.getElementById("rainChart");
+    const visCanvas = document.getElementById("visChart");
 
     if(tempCanvas){
       tempChart = new Chart(tempCanvas, {
@@ -931,6 +936,15 @@
         type: "bar",
         data: { labels, datasets: [{ label: "Niederschlag (mm/h)", data: rains, backgroundColor: "rgba(54, 162, 235, 0.6)" }] },
         options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+
+    if(visCanvas){
+      visChart = new Chart(visCanvas, {
+        type: "line",
+        data: { labels, datasets: [{ label: "Sichtweite (km)", data: vis, fill: true, tension: 0.25 }] },
+        options: { responsive: true }
       });
     }
 
