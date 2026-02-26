@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Route → Webcams | Flugwetter entlang der Strecke – Release 1.0</title>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --text:#e9eefc;
+      --muted:#a9b6d3;
+      --accent:#7aa7ff;
+      --border:rgba(255,255,255,.12);
+      --warn:#ffd27a;
+      --ok:#7dffb2;
+    }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 30% 0%, #142b57 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    .wrap{
+      max-width:1400px;
+      margin:0 auto;
+      padding:18px;
+      display:grid;
+      grid-template-columns: 540px 1fr;
+      gap:14px;
+    }
+    header{
+      grid-column:1/-1;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:6px;
+    }
+    header h1{ margin:0; font-size:20px; letter-spacing:.2px; }
+    header .hint{ color:var(--muted); font-size:13px; }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.25);
+      backdrop-filter: blur(6px);
+    }
+    #map{
+      height: calc(100vh - 130px);
+      min-height:560px;
+      border-radius:16px;
+      overflow:hidden;
+      border:1px solid var(--border);
+    }
+
+    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+    input, select{
+      width:100%;
+      box-sizing:border-box;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      outline:none;
+    }
+    input:focus, select:focus{
+      border-color: rgba(122,167,255,.55);
+      box-shadow: 0 0 0 3px rgba(122,167,255,.18);
+    }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    .btn{
+      border:0;
+      background: linear-gradient(180deg, rgba(122,167,255,.95), rgba(122,167,255,.65));
+      color:#061027;
+      font-weight:800;
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+    }
+    .btn.secondary{
+      background: rgba(255,255,255,.08);
+      color:var(--text);
+      border:1px solid var(--border);
+      font-weight:700;
+    }
+    .btn:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .warn{ color:var(--warn); font-size:13px; margin-top:8px; }
+    .ok{ color:var(--ok); font-size:13px; margin-top:8px; }
+    .small{ font-size:12px; color:var(--muted); line-height:1.35; margin-top:8px; }
+    .inlinehint{ font-size:12px; color:var(--muted); margin-top:6px; }
+
+    .stat{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; color:var(--muted); font-size:12px; }
+    .pill{ padding:6px 10px; border:1px solid var(--border); border-radius:999px; background: rgba(255,255,255,.06); }
+
+    .list{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      max-height: calc(100vh - 585px);
+      overflow:auto;
+      padding-right:4px;
+    }
+    .item{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      background: rgba(0,0,0,.18);
+    }
+    .item .title{ font-weight:800; font-size:14px; margin:0 0 4px; }
+    .item .meta{ color:var(--muted); font-size:12px; margin:0 0 8px; }
+    .item a{ color:var(--accent); text-decoration:none; font-size:13px; font-weight:700; }
+    .thumb{
+      width:100%;
+      border-radius:12px;
+      border:1px solid var(--border);
+      margin-top:8px;
+      display:block;
+    }
+
+    .countryGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:8px;
+      margin-top:8px;
+    }
+    .chk{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:8px 10px;
+      background: rgba(0,0,0,.14);
+    }
+    .chk input{ width:auto; }
+
+    .leaflet-marker-icon.webcam-icon { filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+    .leaflet-marker-icon.route-icon { filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+    .leaflet-marker-icon.wp-icon    { filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+
+    /* WP label (permanent tooltip) */
+    .wp-label{
+      background: rgba(15,27,51,.92);
+      border: 1px solid rgba(122,167,255,.65);
+      color: rgba(233,238,252,.95);
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.35);
+      white-space: nowrap;
+    }
+    .leaflet-tooltip.wp-label:before { display:none; }
+
+    @media (max-width: 1100px){
+      .wrap{ grid-template-columns: 1fr; }
+      #map{ height: 60vh; min-height:420px; }
+      .list{ max-height: 35vh; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Route → Webcams <span style="font-size:14px;font-weight:600;opacity:.7">v1.0</span></h1>
+      <div class="hint">Klick auf Route = Waypoint • Drag Marker = Route ändern • Rechtsklick WP = löschen</div>
+      <div class="hint" style="font-size:13px;opacity:.85">Interaktives Flugwetter‑Tool: Webcams entlang der geplanten Route (VFR / IFR)</div>
+    </div>
+    <div class="hint">Tipp: <b>LOLU</b> → <b>LOWW</b></div>
+  </header>
+
+  <div class="card">
+    <div class="grid2">
+      <div>
+        <label for="fromIcao">Start (ICAO)</label>
+        <input id="fromIcao" value="LOLU" maxlength="4" />
+      </div>
+      <div>
+        <label for="toIcao">Ziel (ICAO)</label>
+        <input id="toIcao" value="LOWW" maxlength="4" />
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:10px;">
+      <div>
+        <label for="corridorKm">Webcam-Suche Radius je Route-Punkt (km)</label>
+        <input id="corridorKm" type="number" min="5" step="5" value="35" />
+      </div>
+      <div>
+        <label for="stepKm">Abtastung entlang Route (km)</label>
+        <input id="stepKm" type="number" min="10" step="10" value="45" />
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:10px;">
+      <div>
+        <label for="maxCams">Max. Webcams gesamt</label>
+        <input id="maxCams" type="number" min="10" step="10" value="200" />
+      </div>
+      <div>
+        <label for="countryLimit">Max. Airports laden (pro Land, 0=alles)</label>
+        <input id="countryLimit" type="number" min="0" step="500" value="0" />
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div style="margin-top:10px;">
+      <label>Webcam-Filter</label>
+      <div class="countryGrid" style="grid-template-columns:1fr 1fr;">
+        <label class="chk"><input type="checkbox" id="onlyMountains" checked> Nur Berge</label>
+        <label class="chk"><input type="checkbox" id="onlyAirports" checked> Nur Flugplätze</label>
+      </div>
+
+      <div class="grid2" style="margin-top:8px;">
+        <div>
+          <label for="filterMode">Wenn beide aktiv:</label>
+          <select id="filterMode">
+            <option value="or" selected>ODER (Berge ODER Flugplätze)</option>
+            <option value="and">UND (Berge UND Flugplätze)</option>
+          </select>
+        </div>
+        <div>
+          <label for="airportRadiusKm">Flugplatznähe (km)</label>
+          <input id="airportRadiusKm" type="number" min="0.5" step="0.5" value="3" />
+        </div>
+      </div>
+
+      <div class="inlinehint">
+        Route bearbeiten: Klick auf Linie ⇒ neuer WP. Marker ziehen ⇒ live. Rechtsklick WP ⇒ löschen.
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <label>Airports laden aus:</label>
+      <div class="countryGrid" id="countryChecks"></div>
+      <div class="small">Standard: AT + IT + CZ + DE + SK + SI.</div>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <button class="btn" id="btnGo">Route laden</button>
+      <button class="btn secondary" id="btnClear">Leeren</button>
+      <button class="btn secondary" id="btnUndo" disabled>Undo</button>
+      <button class="btn secondary" id="btnResetRoute" title="Nur Route-Waypoints zurücksetzen (Start/Ziel bleiben)">Reset</button>
+    </div>
+
+    <div id="msg" class="warn" style="display:none;"></div>
+    <div id="ok" class="ok" style="display:none;"></div>
+
+    <div class="stat" id="stats"></div>
+    <div class="list" id="results"></div>
+
+    <div class="small">
+      Hinweis: Bitte über lokalen Webserver öffnen (CORS), z.B. im Ordner:
+      <code>python -m http.server 8000</code> → <code>http://localhost:8000</code>
+    </div>
+  </div>
+
+  <div id="map" class="card" style="padding:0;"></div>
+</div>
+
+<script>
+const WINDY_API_KEY = "uIdzKp1xYUiQQivHTCzyOG4oa7VkoyIf";
+
+
+const OPENAIP_API_KEY = "b70c0676876b8d1e4b65cd3e73250cc9";
+const COUNTRY_LIST = [
+  { code:"AT", name:"Österreich (AT)", fixed:true },
+  { code:"DE", name:"Deutschland (DE)" },
+  { code:"IT", name:"Italien (IT)" },
+  { code:"CH", name:"Schweiz (CH)" },
+  { code:"CZ", name:"Tschechien (CZ)" },
+  { code:"SK", name:"Slowakei (SK)" },
+  { code:"HU", name:"Ungarn (HU)" },
+  { code:"SI", name:"Slowenien (SI)" },
+];
+const DEFAULT_COUNTRIES_CHECKED = new Set(["DE","IT","CZ","SK","SI"]);
+const OURAIRPORTS_COUNTRY_CSV = (cc) => `https://ourairports.com/countries/${cc}/airports.csv`;
+
+let map;
+let routeLine = null;
+let markersLayer, airportsLayer, webcamsLayer, routeEditLayer;
+
+let routePoints = [];
+let routeMarkers = [];
+let routeInitialized = false;
+let recalcTimer = null;
+let lastWebcamRunId = 0;
+
+const routeHistory = [];
+const HISTORY_MAX = 50;
+
+function updateUndoButton(){
+  const btn = document.getElementById("btnUndo");
+  btn.disabled = routeHistory.length === 0;
+}
+function cloneRoutePoints(points){
+  return points.map(p => ({
+    lat: Number(p.lat),
+    lon: Number(p.lon),
+    type: String(p.type),
+    label: p.label ? String(p.label) : undefined
+  }));
+}
+function pushHistory(){
+  routeHistory.push(cloneRoutePoints(routePoints));
+  if(routeHistory.length > HISTORY_MAX) routeHistory.shift();
+  updateUndoButton();
+}
+function undoRoute(){
+  if(routeHistory.length === 0) return;
+  const prev = routeHistory.pop();
+  routePoints = cloneRoutePoints(prev);
+  renderEditableRoute();
+  scheduleRecalc("Undo");
+  updateUndoButton();
+}
+
+function initMap(){
+  map = L.map("map", { zoomControl:true }).setView([47.9, 13.8], 7);
+  const osmBase = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18,
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(map);
+
+  const openAipOverlay = L.tileLayer(
+    `https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=${OPENAIP_API_KEY}`,
+    {
+      maxZoom: 13,
+      opacity: 0.85,
+      attribution: "&copy; openAIP"
+    }
+  ).addTo(map);
+
+  L.control.layers(
+    { "OpenStreetMap": osmBase },
+    { "openAIP (Luftraum / Flugplätze)": openAipOverlay },
+    { collapsed: false }
+  ).addTo(map);
+markersLayer = L.layerGroup().addTo(map);
+  airportsLayer = L.layerGroup().addTo(map);
+  webcamsLayer = L.layerGroup().addTo(map);
+  routeEditLayer = L.layerGroup().addTo(map);
+}
+
+function clearAll(){
+  hideMsg(); hideOk();
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("stats").innerHTML = "";
+
+  if(routeLine){ map.removeLayer(routeLine); routeLine = null; }
+  markersLayer.clearLayers();
+  airportsLayer.clearLayers();
+  webcamsLayer.clearLayers();
+  routeEditLayer.clearLayers();
+
+  routeMarkers = [];
+  routePoints = [];
+  routeInitialized = false;
+
+  routeHistory.length = 0;
+  updateUndoButton();
+}
+
+function svgToDataUri(svg){
+  return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+}
+
+const WEBCAM_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+  <defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-opacity=".35"/></filter></defs>
+  <g filter="url(#s)">
+    <path d="M22 2c8.84 0 16 7.16 16 16 0 12-16 24-16 24S6 30 6 18C6 9.16 13.16 2 22 2z"
+      fill="#0f1b33" stroke="rgba(255,255,255,.25)" stroke-width="1.2"/>
+    <circle cx="22" cy="18" r="9.5" fill="rgba(122,167,255,.22)" stroke="rgba(122,167,255,.9)" stroke-width="1.6"/>
+    <circle cx="22" cy="18" r="4.2" fill="rgba(233,238,252,.9)" />
+    <path d="M28.8 13.2l3.3-1.7v13l-3.3-1.7z" fill="rgba(233,238,252,.9)"/>
+  </g>
+</svg>`;
+const webcamIcon = L.icon({
+  iconUrl: svgToDataUri(WEBCAM_SVG),
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -32],
+  className: "webcam-icon"
+});
+
+const START_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+  <defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-opacity=".35"/></filter></defs>
+  <g filter="url(#s)">
+    <path d="M22 2c8.84 0 16 7.16 16 16 0 12-16 24-16 24S6 30 6 18C6 9.16 13.16 2 22 2z"
+      fill="#10321f" stroke="rgba(255,255,255,.25)" stroke-width="1.2"/>
+    <circle cx="22" cy="18" r="8.8" fill="rgba(125,255,178,.20)" stroke="rgba(125,255,178,.95)" stroke-width="1.6"/>
+    <path d="M19 14h6v8h-6z" fill="rgba(233,238,252,.92)"/>
+  </g>
+</svg>`;
+const END_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+  <defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-opacity=".35"/></filter></defs>
+  <g filter="url(#s)">
+    <path d="M22 2c8.84 0 16 7.16 16 16 0 12-16 24-16 24S6 30 6 18C6 9.16 13.16 2 22 2z"
+      fill="#3a1a14" stroke="rgba(255,255,255,.25)" stroke-width="1.2"/>
+    <circle cx="22" cy="18" r="8.8" fill="rgba(255,140,122,.18)" stroke="rgba(255,140,122,.95)" stroke-width="1.6"/>
+    <path d="M17.5 14.5h9v2h-9zM17.5 18h9v2h-9zM17.5 21.5h9v2h-9z" fill="rgba(233,238,252,.92)"/>
+  </g>
+</svg>`;
+const WP_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+  <defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity=".35"/></filter></defs>
+  <g filter="url(#s)">
+    <circle cx="18" cy="18" r="12" fill="rgba(15,27,51,.95)" stroke="rgba(122,167,255,.9)" stroke-width="2"/>
+    <circle cx="18" cy="18" r="4.2" fill="rgba(233,238,252,.9)"/>
+  </g>
+</svg>`;
+
+const startIcon = L.icon({ iconUrl: svgToDataUri(START_SVG), iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-32], className:"route-icon" });
+const endIcon   = L.icon({ iconUrl: svgToDataUri(END_SVG),   iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-32], className:"route-icon" });
+const wpIcon    = L.icon({ iconUrl: svgToDataUri(WP_SVG),    iconSize:[28,28], iconAnchor:[14,14], popupAnchor:[0,-12], className:"wp-icon" });
+
+const R_EARTH_KM = 6371.0088;
+function toRad(d){ return d*Math.PI/180; }
+function haversineKm(a,b){
+  const lat1=toRad(a.lat), lon1=toRad(a.lon);
+  const lat2=toRad(b.lat), lon2=toRad(b.lon);
+  const dLat=lat2-lat1, dLon=lon2-lon1;
+  const s=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+  return 2*R_EARTH_KM*Math.asin(Math.min(1, Math.sqrt(s)));
+}
+function normalizeIcao(s){
+  return (s||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,4);
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+function showMsg(text){
+  const el=document.getElementById("msg");
+  el.textContent=text;
+  el.style.display="block";
+}
+function hideMsg(){
+  const el=document.getElementById("msg");
+  el.style.display="none";
+  el.textContent="";
+}
+function showOk(text){
+  const el=document.getElementById("ok");
+  el.textContent=text;
+  el.style.display="block";
+}
+function hideOk(){
+  const el=document.getElementById("ok");
+  el.style.display="none";
+  el.textContent="";
+}
+
+const airportDb = new Map();
+
+async function loadAirportsForCountry(cc, limit=0){
+  const url = OURAIRPORTS_COUNTRY_CSV(cc);
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`Airports CSV ${cc} HTTP ${res.status}`);
+  const text = await res.text();
+
+  const rows = parseCsv(text);
+  let count = 0;
+  for(const r of rows){
+    const gps = (r.gps_code || "").trim().toUpperCase();
+    const ident = (r.ident || "").trim().toUpperCase();
+    const icao = (gps || ident).slice(0,4);
+    if(!/^[A-Z0-9]{4}$/.test(icao)) continue;
+
+    const lat = Number(r.latitude_deg);
+    const lon = Number(r.longitude_deg);
+    if(!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    if(!airportDb.has(icao)){
+      airportDb.set(icao, {
+        icao,
+        name: r.name || icao,
+        lat, lon,
+        type: r.type || "",
+        country: cc
+      });
+      count++;
+      if(limit > 0 && count >= limit) break;
+    }
+  }
+  return count;
+}
+
+function parseCsv(csvText){
+  const lines = csvText.split(/\r?\n/).filter(l => l.trim().length>0);
+  const header = splitCsvLine(lines[0]).map(h => h.trim());
+  const out = [];
+  for(let i=1;i<lines.length;i++){
+    const cols = splitCsvLine(lines[i]);
+    if(cols.length < header.length) continue;
+    const obj = {};
+    for(let j=0;j<header.length;j++){
+      obj[header[j]] = cols[j] ?? "";
+    }
+    out.push(obj);
+  }
+  return out;
+}
+function splitCsvLine(line){
+  const res = [];
+  let cur = "", inQ = false;
+  for(let i=0;i<line.length;i++){
+    const ch = line[i];
+    if(ch === '"'){
+      if(inQ && line[i+1] === '"'){ cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if(ch === ',' && !inQ){
+      res.push(cur); cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  res.push(cur);
+  return res;
+}
+
+function addAirportMarker(icao, ap){
+  const m = L.circleMarker([ap.lat, ap.lon], { radius:5, weight:2, fillOpacity:0.15 }).addTo(airportsLayer);
+  m.bindPopup(`<b>${icao}</b><br>${escapeHtml(ap.name || "Airport")}<br><small>${ap.lat.toFixed(4)}, ${ap.lon.toFixed(4)}</small>`);
+  return m;
+}
+
+let airportGrid = new Map();
+let airportGridCellDeg = 0.10;
+
+function cellKey(lat, lon, cellDeg){
+  const x = Math.floor(lon / cellDeg);
+  const y = Math.floor(lat / cellDeg);
+  return `${x},${y}`;
+}
+function buildAirportGrid(cellDeg = 0.10){
+  airportGridCellDeg = cellDeg;
+  airportGrid = new Map();
+  for(const ap of airportDb.values()){
+    const k = cellKey(ap.lat, ap.lon, cellDeg);
+    if(!airportGrid.has(k)) airportGrid.set(k, []);
+    airportGrid.get(k).push(ap);
+  }
+}
+function airportsNear(lat, lon, radiusKm){
+  const cellDeg = airportGridCellDeg;
+  const rLatDeg = radiusKm / 111.32;
+  const cosLat = Math.max(0.2, Math.cos(toRad(lat)));
+  const rLonDeg = radiusKm / (111.32 * cosLat);
+
+  const minLat = lat - rLatDeg, maxLat = lat + rLatDeg;
+  const minLon = lon - rLonDeg, maxLon = lon + rLonDeg;
+
+  const x0 = Math.floor(minLon / cellDeg);
+  const x1 = Math.floor(maxLon / cellDeg);
+  const y0 = Math.floor(minLat / cellDeg);
+  const y1 = Math.floor(maxLat / cellDeg);
+
+  const candidates = [];
+  for(let x=x0; x<=x1; x++){
+    for(let y=y0; y<=y1; y++){
+      const k = `${x},${y}`;
+      const arr = airportGrid.get(k);
+      if(arr) candidates.push(...arr);
+    }
+  }
+
+  const out = [];
+  for(const ap of candidates){
+    const d = haversineKm({lat, lon}, ap);
+    if(d <= radiusKm) out.push({ ap, d });
+  }
+  out.sort((a,b)=>a.d-b.d);
+  return out;
+}
+
+let windyCategoryList = null;
+async function windyLoadCategories(apiKey){
+  if(windyCategoryList) return windyCategoryList;
+  const url = "https://api.windy.com/webcams/api/v3/categories?lang=en";
+  const res = await fetch(url, { headers: { "x-windy-api-key": apiKey } });
+  if(!res.ok) throw new Error(`Windy categories HTTP ${res.status}`);
+  const arr = await res.json();
+  windyCategoryList = (Array.isArray(arr) ? arr : []).map(c => ({
+    id: String(c.id),
+    name: String(c.name || ""),
+    nameLower: String(c.name || "").toLowerCase()
+  }));
+  return windyCategoryList;
+}
+function windyFindCategoryIdsByNameContains(categoryList, substr){
+  const s = substr.toLowerCase();
+  return categoryList.filter(c => c.nameLower.includes(s)).map(c => c.id);
+}
+async function windyFetchWebcamsNearby(apiKey, lat, lon, radiusKm, limit=50){
+  const url =
+    `https://api.windy.com/webcams/api/v3/webcams` +
+    `?nearby=${encodeURIComponent(`${lat},${lon},${radiusKm}`)}` +
+    `&include=${encodeURIComponent("location,images,urls,categories")}` +
+    `&limit=${encodeURIComponent(String(Math.min(50, Math.max(1, limit))))}`;
+
+  const res = await fetch(url, { headers: { "x-windy-api-key": apiKey } });
+  if(!res.ok){
+    const t = await res.text().catch(()=> "");
+    throw new Error(`Windy HTTP ${res.status}: ${t.slice(0,200)}`);
+  }
+  const json = await res.json();
+  const webcams = Array.isArray(json.webcams) ? json.webcams : [];
+  return webcams.map(normalizeWindyWebcam).filter(Boolean);
+}
+function normalizeWindyWebcam(w){
+  const id = w?.id ?? w?.webcamId ?? null;
+  const lat = w?.location?.latitude ?? w?.location?.lat ?? null;
+  const lon = w?.location?.longitude ?? w?.location?.lon ?? null;
+  if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+  const preview =
+    w?.images?.current?.preview ??
+    w?.images?.current?.icon ??
+    w?.images?.daylight?.preview ??
+    w?.images?.preview ??
+    null;
+
+  const url =
+    w?.urls?.detail ?? w?.urls?.webcam ?? w?.urls?.homepage ?? null;
+
+  const title = w?.title ?? w?.name ?? `Webcam ${id}`;
+
+  const rawCats = w?.categories;
+  let categoryIds = [];
+  if(Array.isArray(rawCats)){
+    if(typeof rawCats[0] === "string" || typeof rawCats[0] === "number"){
+      categoryIds = rawCats.map(String);
+    } else {
+      categoryIds = rawCats.map(c => c?.id).filter(Boolean).map(String);
+    }
+  }
+
+  return { id: String(id), title, lat: Number(lat), lon: Number(lon), preview, url, categoryIds };
+}
+function attachCategoryNamesToWebcams(webcams, categoryList){
+  const idToName = new Map(categoryList.map(c => [c.id, c.name]));
+  for(const wc of webcams){
+    wc.categoryNames = (wc.categoryIds || [])
+      .map(id => idToName.get(id))
+      .filter(Boolean);
+  }
+}
+
+function webcamMatchesMountain(wc, mountainCatIds){
+  if(!mountainCatIds.length) return false;
+  return (wc.categoryIds || []).some(id => mountainCatIds.includes(id));
+}
+function webcamMatchesAirportCategory(wc, airportCatIds){
+  if(!airportCatIds.length) return false;
+  return (wc.categoryIds || []).some(id => airportCatIds.includes(id));
+}
+function webcamNearAirport(wc, radiusKm){
+  const hits = airportsNear(wc.lat, wc.lon, radiusKm);
+  return hits.length ? hits[0] : null;
+}
+
+function interpolateLatLon(a,b,t){
+  return { lat: a.lat + (b.lat-a.lat)*t, lon: a.lon + (b.lon-a.lon)*t };
+}
+function sampleAlongRoute(a,b,stepKm){
+  const dist = haversineKm(a,b);
+  const n = Math.max(1, Math.ceil(dist / stepKm));
+  const pts = [];
+  for(let i=0;i<=n;i++){
+    pts.push(interpolateLatLon(a,b,i/n));
+  }
+  return { pts, distKm: dist };
+}
+
+function pointToSegmentKm(p, a, b){
+  const meanLat = toRad((a.lat + b.lat)/2);
+  const kx = Math.cos(meanLat);
+  const ax = a.lon * kx, ay = a.lat;
+  const bx = b.lon * kx, by = b.lat;
+  const px = p.lon * kx, py = p.lat;
+
+  const abx = bx - ax, aby = by - ay;
+  const apx = px - ax, apy = py - ay;
+
+  const ab2 = abx*abx + aby*aby;
+  const t = ab2 === 0 ? 0 : Math.max(0, Math.min(1, (apx*abx + apy*aby) / ab2));
+  const cx = ax + t*abx, cy = ay + t*aby;
+
+  const dLat = (py - cy);
+  const dLonScaled = (px - cx);
+  const degDist = Math.sqrt(dLat*dLat + dLonScaled*dLonScaled);
+  return degDist * 111.32;
+}
+function findInsertIndexOnLine(latlng, pts){
+  let bestIdx = 1;
+  let best = Infinity;
+  for(let i=0;i<pts.length-1;i++){
+    const d = pointToSegmentKm(
+      {lat: latlng.lat, lon: latlng.lng},
+      {lat: pts[i].lat, lon: pts[i].lon},
+      {lat: pts[i+1].lat, lon: pts[i+1].lon}
+    );
+    if(d < best){ best = d; bestIdx = i+1; }
+  }
+  return bestIdx;
+}
+
+function renderEditableRoute(){
+  routeEditLayer.clearLayers();
+  routeMarkers = [];
+
+  if(routeLine){
+    map.removeLayer(routeLine);
+    routeLine = null;
+  }
+  if(routePoints.length < 2) return;
+
+  routeLine = L.polyline(routePoints.map(p => [p.lat, p.lon]), { weight: 4 }).addTo(map);
+
+  routeLine.on("click", (e) => {
+    if(routePoints.length < 2) return;
+    pushHistory();
+    const idx = findInsertIndexOnLine(e.latlng, routePoints);
+    routePoints.splice(idx, 0, { lat: e.latlng.lat, lon: e.latlng.lng, type:"wp" });
+    renderEditableRoute();
+    scheduleRecalc("Waypoint hinzugefügt");
+  });
+
+  let wpCounter = 0;
+
+  routePoints.forEach((p, i) => {
+    const icon = (p.type === "start") ? startIcon : (p.type === "end") ? endIcon : wpIcon;
+    const m = L.marker([p.lat, p.lon], { draggable: true, icon }).addTo(routeEditLayer);
+
+    if(p.type === "wp"){
+      wpCounter++;
+      m.bindTooltip(`WP${wpCounter}`, {
+        permanent: true,
+        direction: "right",
+        offset: [14, 0],
+        opacity: 1,
+        className: "wp-label"
+      });
+    }
+
+    m.on("dragstart", () => { pushHistory(); });
+    m.on("drag", (ev) => {
+      const ll = ev.target.getLatLng();
+      routePoints[i].lat = ll.lat;
+      routePoints[i].lon = ll.lng;
+      if(routeLine) routeLine.setLatLngs(routePoints.map(x => [x.lat, x.lon]));
+    });
+    m.on("dragend", () => scheduleRecalc("Route geändert"));
+
+    m.on("contextmenu", () => {
+      if(routePoints[i]?.type === "wp"){
+        pushHistory();
+        routePoints.splice(i,1);
+        renderEditableRoute();
+        scheduleRecalc("Waypoint gelöscht");
+      }
+    });
+
+    const label = p.type === "wp" ? `WP` : p.type.toUpperCase();
+    m.bindPopup(`<b>${label}</b><br><small>${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</small>`);
+
+    routeMarkers.push(m);
+  });
+}
+
+function addWebcamMarker(wc){
+  const m = L.marker([wc.lat, wc.lon], { icon: webcamIcon }).addTo(webcamsLayer);
+  const img = wc.preview ? `<br><img class="thumb" src="${wc.preview}" alt="preview">` : "";
+  const cats = wc.categoryNames?.length ? `<br><small style="opacity:.75">Kategorien: ${escapeHtml(wc.categoryNames.join(", "))}</small>` : "";
+  m.bindPopup(
+    `<b>${escapeHtml(wc.title || "Webcam")}</b><br>` +
+    `<small>${wc.lat.toFixed(4)}, ${wc.lon.toFixed(4)}</small><br>` +
+    (wc.url ? `<a href="${wc.url}" target="_blank" rel="noopener">Webcam öffnen</a>` : ``) +
+    img + cats
+  );
+  return m;
+}
+
+function scheduleRecalc(reason){
+  hideMsg();
+  if(reason) showOk(`${reason} – Webcams werden neu berechnet …`);
+  clearTimeout(recalcTimer);
+  recalcTimer = setTimeout(() => {
+    hideOk();
+    if(routeInitialized) recomputeWebcamsFromRoute();
+  }, 650);
+}
+
+function buildCountryChecks(){
+  const host = document.getElementById("countryChecks");
+  host.innerHTML = "";
+  for(const c of COUNTRY_LIST){
+    const id = `cc_${c.code}`;
+    const checked = c.fixed ? true : DEFAULT_COUNTRIES_CHECKED.has(c.code);
+    const disabled = c.fixed ? "disabled" : "";
+    const div = document.createElement("label");
+    div.className = "chk";
+    div.innerHTML = `
+      <input type="checkbox" id="${id}" ${checked ? "checked" : ""} ${disabled}>
+      <span>${escapeHtml(c.name)}</span>
+    `;
+    host.appendChild(div);
+  }
+}
+function getSelectedCountries(){
+  const selected = ["AT"];
+  for(const c of COUNTRY_LIST){
+    if(c.fixed) continue;
+    const cb = document.getElementById(`cc_${c.code}`);
+    if(cb && cb.checked) selected.push(c.code);
+  }
+  return selected;
+}
+
+async function loadRouteFromInputs(){
+  hideMsg(); hideOk();
+
+  const fromIcao = normalizeIcao(document.getElementById("fromIcao").value);
+  const toIcao = normalizeIcao(document.getElementById("toIcao").value);
+  document.getElementById("fromIcao").value = fromIcao;
+  document.getElementById("toIcao").value = toIcao;
+
+  const countryLimit = Math.max(0, Number(document.getElementById("countryLimit").value) || 0);
+  const countries = getSelectedCountries();
+
+  try{
+    airportDb.clear();
+    for(const cc of countries) await loadAirportsForCountry(cc, countryLimit);
+    buildAirportGrid(0.10);
+  } catch(e){
+    showMsg("Airports konnten nicht geladen werden. Bitte über lokalen Webserver öffnen. Details: " + e.message);
+    return false;
+  }
+
+  const from = airportDb.get(fromIcao);
+  const to = airportDb.get(toIcao);
+  if(!from || !to){
+    showMsg(`ICAO nicht gefunden. Start=${fromIcao} ${from?"✓":"✗"} • Ziel=${toIcao} ${to?"✓":"✗"} • Geladene ICAOs: ${airportDb.size}`);
+    return false;
+  }
+
+  routeHistory.length = 0;
+  updateUndoButton();
+
+  routePoints = [
+    { lat: from.lat, lon: from.lon, type:"start", label: fromIcao },
+    { lat: to.lat,   lon: to.lon,   type:"end",   label: toIcao }
+  ];
+  routeInitialized = true;
+
+  renderEditableRoute();
+
+  const bounds = routeLine.getBounds();
+  map.fitBounds(bounds.pad(0.35));
+
+  airportsLayer.clearLayers();
+  const b = bounds.pad(0.6);
+  let airportsShown = 0;
+  for(const ap of airportDb.values()){
+    if(ap.lat >= b.getSouth() && ap.lat <= b.getNorth() && ap.lon >= b.getWest() && ap.lon <= b.getEast()){
+      addAirportMarker(ap.icao, ap);
+      airportsShown++;
+      if(airportsShown >= 250) break;
+    }
+  }
+
+  showOk("Route geladen. Route ist editierbar.");
+  setTimeout(hideOk, 1400);
+
+  await recomputeWebcamsFromRoute();
+  return true;
+}
+
+function resetRouteWaypointsOnly(){
+  if(routePoints.length < 2) return;
+  pushHistory();
+  const start = routePoints.find(p=>p.type==="start") || routePoints[0];
+  const end = routePoints.find(p=>p.type==="end") || routePoints[routePoints.length-1];
+  routePoints = [
+    { lat:start.lat, lon:start.lon, type:"start", label:start.label },
+    { lat:end.lat,   lon:end.lon,   type:"end",   label:end.label }
+  ];
+  renderEditableRoute();
+  scheduleRecalc("Reset");
+}
+
+async function recomputeWebcamsFromRoute(){
+  const runId = ++lastWebcamRunId;
+
+  webcamsLayer.clearLayers();
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("stats").innerHTML = "";
+
+  if(routePoints.length < 2){
+    showMsg("Route hat zu wenig Punkte.");
+    return;
+  }
+
+  const radiusKm = Math.max(5, Number(document.getElementById("corridorKm").value) || 35);
+  const stepKm = Math.max(10, Number(document.getElementById("stepKm").value) || 45);
+  const maxCams = Math.max(10, Number(document.getElementById("maxCams").value) || 200);
+
+  const onlyMountains = document.getElementById("onlyMountains").checked;
+  const onlyAirports = document.getElementById("onlyAirports").checked;
+  const filterMode = document.getElementById("filterMode").value;
+  const airportRadiusKm = Math.max(0.5, Number(document.getElementById("airportRadiusKm").value) || 3);
+
+  let categoryList = [];
+  let mountainCatIds = [];
+  let airportCatIds = [];
+  try{
+    categoryList = await windyLoadCategories(WINDY_API_KEY);
+    mountainCatIds = windyFindCategoryIdsByNameContains(categoryList, "mountain");
+    airportCatIds = windyFindCategoryIdsByNameContains(categoryList, "airport");
+  } catch(e){
+    // not fatal
+  }
+
+  const dedupe = new Map();
+  let windyCalls = 0;
+  let totalRouteKm = 0;
+
+  try{
+    for(let i=0;i<routePoints.length-1;i++){
+      const a = routePoints[i];
+      const b = routePoints[i+1];
+      const { pts, distKm } = sampleAlongRoute(a, b, stepKm);
+      totalRouteKm += distKm;
+
+      for(const p of pts){
+        if(runId !== lastWebcamRunId) return;
+
+        const chunk = await windyFetchWebcamsNearby(WINDY_API_KEY, p.lat, p.lon, radiusKm, 50);
+        windyCalls++;
+
+        for(const wc of chunk){
+          if(!dedupe.has(wc.id)) dedupe.set(wc.id, wc);
+        }
+        if(dedupe.size >= maxCams * 6) break;
+      }
+      if(dedupe.size >= maxCams * 6) break;
+    }
+  } catch(e){
+    showMsg("Windy Webcams API Fehler: " + e.message);
+  }
+
+  let webcams = Array.from(dedupe.values());
+  attachCategoryNamesToWebcams(webcams, categoryList);
+
+  const wantAnyFilter = (onlyMountains || onlyAirports);
+  if(wantAnyFilter){
+    webcams = webcams.filter(wc => {
+      const isMountain = onlyMountains ? webcamMatchesMountain(wc, mountainCatIds) : false;
+      const hasAirportCat = onlyAirports ? webcamMatchesAirportCategory(wc, airportCatIds) : false;
+      const nearest = onlyAirports ? webcamNearAirport(wc, airportRadiusKm) : null;
+      const isNearAirport = !!nearest;
+
+      if(onlyMountains && onlyAirports){
+        return (filterMode === "and")
+          ? (isMountain && (hasAirportCat || isNearAirport))
+          : (isMountain || hasAirportCat || isNearAirport);
+      } else if(onlyMountains){
+        return isMountain;
+      } else if(onlyAirports){
+        return (hasAirportCat || isNearAirport);
+      }
+      return true;
+    });
+  }
+
+  webcams = webcams.slice(0, maxCams);
+
+  for(const wc of webcams) addWebcamMarker(wc);
+
+  const resEl = document.getElementById("results");
+  if(webcams.length === 0){
+    resEl.innerHTML = `<div class="item"><div class="title">Keine Webcams nach Filter</div><div class="meta">Tipp: Radius erhöhen oder Filtermodus ODER wählen.</div></div>`;
+  } else {
+    for(const wc of webcams){
+      const div = document.createElement("div");
+      div.className = "item";
+
+      let nearestHtml = "";
+      if(onlyAirports){
+        const n = webcamNearAirport(wc, airportRadiusKm);
+        if(n){
+          nearestHtml = `<div class="meta">Nächster Flugplatz: <b>${escapeHtml(n.ap.icao)}</b> (${escapeHtml(n.ap.name)}) • ${n.d.toFixed(2)} km</div>`;
+        }
+      }
+
+      const cats = wc.categoryNames?.length ? wc.categoryNames.join(", ") : "—";
+      div.innerHTML =
+        `<div class="title">${escapeHtml(wc.title)}</div>` +
+        `<div class="meta">${wc.lat.toFixed(4)}, ${wc.lon.toFixed(4)} • Kategorien: ${escapeHtml(cats)}</div>` +
+        nearestHtml +
+        (wc.url ? `<a href="${wc.url}" target="_blank" rel="noopener">Webcam öffnen</a>` : ``) +
+        (wc.preview ? `<img class="thumb" src="${wc.preview}" alt="preview">` : ``);
+      resEl.appendChild(div);
+    }
+  }
+
+  const wpCount = routePoints.filter(p=>p.type==="wp").length;
+  document.getElementById("stats").innerHTML = `
+    <div class="pill">Routepunkte: ${routePoints.length} (WP: ${wpCount})</div>
+    <div class="pill">Strecke: ~${totalRouteKm.toFixed(1)} km</div>
+    <div class="pill">Windy Calls: ${windyCalls}</div>
+    <div class="pill">Webcams: ${webcams.length}/${maxCams}</div>
+    <div class="pill">Filter: Berge=${onlyMountains?"an":"aus"} • Flugplätze=${onlyAirports?"an":"aus"} • Modus=${filterMode.toUpperCase()}</div>
+  `;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initMap();
+  buildCountryChecks();
+  updateUndoButton();
+
+  document.getElementById("btnGo").addEventListener("click", loadRouteFromInputs);
+  document.getElementById("btnClear").addEventListener("click", clearAll);
+  document.getElementById("btnResetRoute").addEventListener("click", resetRouteWaypointsOnly);
+  document.getElementById("btnUndo").addEventListener("click", undoRoute);
+
+  ["fromIcao","toIcao","corridorKm","stepKm","maxCams","countryLimit","airportRadiusKm"].forEach(id=>{
+    const el = document.getElementById(id);
+    el.addEventListener("keydown", e => { if(e.key==="Enter") loadRouteFromInputs(); });
+  });
+
+  ["onlyMountains","onlyAirports","filterMode","airportRadiusKm","corridorKm","stepKm","maxCams"].forEach(id=>{
+    const el = document.getElementById(id);
+    el.addEventListener("change", () => scheduleRecalc("Einstellungen geändert"));
+  });
+
+  loadRouteFromInputs();
+});
+</script>
+
+<footer style="margin:24px auto 8px;max-width:1400px;padding:0 18px;font-size:12px;opacity:.7;text-align:center">
+  Webcams © Windy.com · Aviation Data © openAIP · Karten © OpenStreetMap-Mitwirkende ·
+  Route → Webcams v1.0
+</footer>
+</body>
+
+</html>
